@@ -41,4 +41,13 @@ jobs:
           fi
 
       - name: Run CI checks
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_WEBHOOK_SECRET_TOKEN: ${{ secrets.TELEGRAM_WEBHOOK_SECRET_TOKEN }}
+          TELEGRAM_BOT_USERNAME: ${{ secrets.TELEGRAM_BOT_USERNAME }}
+
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
         run: pnpm run ci
