@@ -5,7 +5,7 @@ create type public.app_role as enum (
   'ops_admin',
   'dispatcher',
   'responder',
-  'viewer'
+  'civilian'
 );
 
 create table public.profiles (
