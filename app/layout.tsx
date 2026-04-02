@@ -13,7 +13,11 @@ export const metadata: Metadata = {
   description: 'DRRM communication control center',
 };
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
 
 export default function RootLayout({
   children,
