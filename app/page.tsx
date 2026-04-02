@@ -1,4 +1,7 @@
 import { AuthButton } from '@/components/auth-button';
+import Logo from '@/components/brand/logo';
+import Wordmark from '@/components/brand/wordmark';
+import WordmarkLogo from '@/components/brand/wordmark-logo';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import Link from 'next/link';
 import { Suspense } from 'react';
@@ -9,8 +12,11 @@ export default function Home() {
       <div className="flex-1 w-full flex flex-col gap-20 items-center">
         <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
           <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-            <Link href={'/'} className="font-semibold">
-              Project HERMES
+            <Link href="/" className="font-semibold flex items-center">
+              {/* Small screens */}
+              <Logo className="w-10 block sm:hidden" />
+              <Wordmark className="w-32 hidden sm:block md:hidden" />
+              <WordmarkLogo className="w-40 hidden md:block" />
             </Link>
             <div className="flex gap-4 items-center">
               <Suspense>
