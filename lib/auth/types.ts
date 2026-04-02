@@ -38,3 +38,14 @@ export type InvitePreview = {
   role?: AppRole;
   expiresAt?: string | null;
 };
+
+export type InviteRecord = {
+  id: string;
+  email: string;
+  role: AppRole;
+  invited_by: string;
+  created_at: string;
+  expires_at: string | null;
+  accepted_at: string | null;
+  revoked_at: string | null;
+};

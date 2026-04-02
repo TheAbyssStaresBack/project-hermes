@@ -68,6 +68,10 @@ const createInviteSchema = z.object({
   expiresInDays: optionalExpirationSchema,
 });
 
+const reissueInviteSchema = z.object({
+  inviteId: z.string().uuid('Invite id is invalid.'),
+});
+
 const acceptInviteSchema = z
   .object({
     token: z.string().trim().min(1, 'Invite token is required.'),
@@ -101,6 +105,73 @@ function inviteRoleAllowed(role: AppRole, canInviteAdmins: boolean) {
   }
 
   return canInviteAdmins && role === 'admin';
+}
+
+async function emailBelongsToExistingUser(
+  adminClient: ReturnType<typeof createAdminClient>,
+  email: string
+) {
+  const { data, error } = await adminClient.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data.users.some((user) => normalizeEmail(user.email ?? '') === email);
+}
+
+function buildInviteExpiresAt(expiresInDays?: number) {
+  if (!expiresInDays) {
+    return null;
+  }
+
+  return new Date(
+    Date.now() + expiresInDays * 24 * 60 * 60 * 1000
+  ).toISOString();
+}
+
+function deriveReissueExpiresAt(createdAt: string, expiresAt: string | null) {
+  if (!expiresAt) {
+    return null;
+  }
+
+  const createdAtMs = new Date(createdAt).getTime();
+  const expiresAtMs = new Date(expiresAt).getTime();
+  const durationMs = expiresAtMs - createdAtMs;
+
+  if (!Number.isFinite(durationMs) || durationMs <= 0) {
+    return buildInviteExpiresAt(7);
+  }
+
+  const durationDays = Math.max(
+    1,
+    Math.min(30, Math.round(durationMs / (24 * 60 * 60 * 1000)))
+  );
+
+  return buildInviteExpiresAt(durationDays);
+}
+
+function buildInviteDelivery(
+  email: string,
+  token: string
+): Pick<AuthActionState, 'inviteUrl' | 'inviteMailtoUrl' | 'inviteEmail'> {
+  const inviteUrl = `${getSiteUrl()}/auth/invite?token=${encodeURIComponent(
+    token
+  )}`;
+  const mailBody = encodeURIComponent(
+    `You have been invited to Project HERMES.\n\nOpen this link to finish your account setup:\n${inviteUrl}`
+  );
+
+  return {
+    inviteUrl,
+    inviteMailtoUrl: `mailto:${encodeURIComponent(
+      email
+    )}?subject=Project%20HERMES%20Invite&body=${mailBody}`,
+    inviteEmail: email,
+  };
 }
 
 async function releaseBootstrapClaim(email: string) {
@@ -251,28 +322,10 @@ export async function createAccountInviteAction(
   const token = createInviteToken();
   const tokenHash = hashInviteToken(token);
   const now = new Date();
-  const expiresAt = expiresInDays
-    ? new Date(
-        now.getTime() + expiresInDays * 24 * 60 * 60 * 1000
-      ).toISOString()
-    : null;
+  const expiresAt = buildInviteExpiresAt(expiresInDays);
 
   try {
-    const { data: existingUsers, error: listUsersError } =
-      await adminClient.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
-
-    if (listUsersError) {
-      throw listUsersError;
-    }
-
-    if (
-      existingUsers.users.some(
-        (user) => normalizeEmail(user.email ?? '') === email
-      )
-    ) {
+    if (await emailBelongsToExistingUser(adminClient, email)) {
       return asErrorState('That email address already belongs to an account.');
     }
 
@@ -313,25 +366,128 @@ export async function createAccountInviteAction(
     );
   }
 
-  const inviteUrl = `${getSiteUrl()}/auth/invite?token=${encodeURIComponent(
-    token
-  )}`;
-  const mailBody = encodeURIComponent(
-    `You have been invited to Project HERMES.\n\nOpen this link to finish your account setup:\n${inviteUrl}`
-  );
-
   revalidatePath('/admin/invites');
 
   return {
     status: 'success',
     message: 'Invite created. Share the link directly or send it by email.',
-    inviteUrl,
-    inviteMailtoUrl: `mailto:${encodeURIComponent(
-      email
-    )}?subject=Project%20HERMES%20Invite&body=${mailBody}`,
-    inviteEmail: email,
+    ...buildInviteDelivery(email, token),
     inviteRole: role,
   };
+}
+
+export async function reissueAccountInviteAction(
+  previousState: AuthActionState = INITIAL_STATE,
+  formData: FormData
+): Promise<AuthActionState> {
+  void previousState;
+
+  const inviter = await requireRole(['admin', 'super_admin']);
+  const canInviteAdmins = userHasRole(inviter, 'super_admin');
+
+  const validatedFields = reissueInviteSchema.safeParse({
+    inviteId: formData.get('inviteId'),
+  });
+
+  if (!validatedFields.success) {
+    return asErrorState(
+      'The selected invite could not be reissued.',
+      validatedFields.error.flatten().fieldErrors
+    );
+  }
+
+  const { inviteId } = validatedFields.data;
+  const adminClient = createAdminClient();
+  const sessionClient = await createClient();
+
+  try {
+    const { data: invite, error: inviteError } = await sessionClient
+      .from('account_invites')
+      .select(
+        'id, email, role, invited_by, created_at, expires_at, accepted_at, revoked_at'
+      )
+      .eq('id', inviteId)
+      .maybeSingle();
+
+    if (inviteError) {
+      throw inviteError;
+    }
+
+    if (!invite) {
+      return asErrorState('Invite not found.');
+    }
+
+    if (invite.accepted_at) {
+      return asErrorState('Accepted invites cannot be reissued.');
+    }
+
+    if (!inviteRoleAllowed(invite.role, canInviteAdmins)) {
+      return asErrorState(
+        'You are not allowed to reissue invites for that role.'
+      );
+    }
+
+    if (!canInviteAdmins && invite.invited_by !== inviter.id) {
+      return asErrorState('You can only reissue your own responder invites.');
+    }
+
+    if (await emailBelongsToExistingUser(adminClient, invite.email)) {
+      return asErrorState('That email address already belongs to an account.');
+    }
+
+    const token = createInviteToken();
+    const tokenHash = hashInviteToken(token);
+    const expiresAt = deriveReissueExpiresAt(
+      invite.created_at,
+      invite.expires_at
+    );
+
+    const { data: deletedInvite, error: deleteError } = await sessionClient
+      .from('account_invites')
+      .delete()
+      .eq('id', invite.id)
+      .select('id')
+      .maybeSingle();
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    if (!deletedInvite) {
+      return asErrorState(
+        'This invite could not be reissued. It may have changed since the page loaded.'
+      );
+    }
+
+    const { error: insertError } = await sessionClient
+      .from('account_invites')
+      .insert({
+        email: invite.email,
+        role: invite.role,
+        invited_by: inviter.id,
+        token_hash: tokenHash,
+        expires_at: expiresAt,
+      });
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    revalidatePath('/admin/invites');
+
+    return {
+      status: 'success',
+      message: 'Invite reissued. Share the fresh link with the recipient.',
+      ...buildInviteDelivery(invite.email, token),
+      inviteRole: invite.role,
+    };
+  } catch (error) {
+    unstable_rethrow(error);
+
+    return asErrorState(
+      error instanceof Error ? error.message : 'Unable to reissue invite.'
+    );
+  }
 }
 
 export async function acceptAccountInviteAction(
