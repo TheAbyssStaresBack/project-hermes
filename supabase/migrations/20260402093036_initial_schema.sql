@@ -193,7 +193,7 @@ CREATE POLICY "Responders can read advisory recipients"
 ON public.advisory_recipients
 FOR SELECT
 TO authenticated
-USING ((select auth.role()) = 'authenticated');
+USING ((SELECT auth.role()) = 'authenticated');
 
 CREATE POLICY "Backend can update advisory recipients"
 ON public.advisory_recipients
