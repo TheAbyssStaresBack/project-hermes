@@ -28,6 +28,23 @@ export default function Home() {
         <div className="flex-1 flex flex-col gap-12 max-w-2xl p-5 items-center text-center">
           <div className="space-y-4">
             <h1 className="text-4xl font-bold">Welcome</h1>
+            <p className="text-sm text-muted-foreground">
+              <Link
+                href="/terms"
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                Terms of Service
+              </Link>
+              <span className="mx-2 text-muted-foreground" aria-hidden>
+                ·
+              </span>
+              <Link
+                href="/privacy"
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                Privacy Policy
+              </Link>
+            </p>
           </div>
         </div>
       </div>
