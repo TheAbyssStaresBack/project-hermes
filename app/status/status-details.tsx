@@ -36,12 +36,12 @@ export async function StatusDetails() {
             <span className="text-muted-foreground">Environment</span>
             <span
               className={
-                readiness.checks.env.ok
+                readiness.checks.env.okay
                   ? 'text-green-600 dark:text-green-400'
                   : 'text-destructive'
               }
             >
-              {readiness.checks.env.ok
+              {readiness.checks.env.okay
                 ? 'Required public env present'
                 : `Missing: ${readiness.checks.env.missing?.join(', ') ?? 'unknown'}`}
             </span>
@@ -50,12 +50,12 @@ export async function StatusDetails() {
             <span className="text-muted-foreground">Supabase Auth</span>
             <span
               className={
-                readiness.checks.supabase.ok
+                readiness.checks.supabase.okay
                   ? 'text-green-600 dark:text-green-400'
                   : 'text-destructive'
               }
             >
-              {readiness.checks.supabase.ok
+              {readiness.checks.supabase.okay
                 ? 'auth/v1/health OK'
                 : `Not ready (${readiness.checks.supabase.detail ?? 'unknown'})`}
             </span>
