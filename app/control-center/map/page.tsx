@@ -1,7 +1,12 @@
+import { Map, MapControls } from '@/components/control-center/map/map';
+import { Card } from '@/components/ui/card';
+
 export default function Page() {
   return (
-    <div className="@container/main flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      Hello
-    </div>
+    <Card className="h-[320px] p-0 overflow-hidden">
+      <Map center={[-74.006, 40.7128]} zoom={11}>
+        <MapControls />
+      </Map>
+    </Card>
   );
 }
