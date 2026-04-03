@@ -1,9 +1,9 @@
 'use client';
 import { Button } from '@/components/ui/button';
+import { useTypewriter } from '@/hooks/use-typewriter';
 import { ArrowRight, Play } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
-const incidentTypes = [
+const INCIDENT_TYPES = [
   'Fire',
   'Flood',
   'Earthquake',
@@ -14,64 +14,17 @@ const incidentTypes = [
   'Disaster',
 ];
 
-function useTypewriter(
-  words: string[],
-  typingSpeed = 500,
-  deletingSpeed = 250,
-  pauseDuration = 1000
-) {
-  const [displayText, setDisplayText] = useState('');
-  const [wordIndex, setWordIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
-
-  useEffect(() => {
-    if (isLocked) return;
-
-    const currentWord = words[wordIndex];
-    const isLastWord = wordIndex === words.length - 1;
-
-    const timeout = setTimeout(
-      () => {
-        if (!isDeleting) {
-          if (displayText.length < currentWord.length) {
-            setDisplayText(currentWord.slice(0, displayText.length + 1));
-          } else {
-            if (isLastWord) {
-              setIsLocked(true);
-            } else {
-              setTimeout(() => setIsDeleting(true), pauseDuration);
-            }
-          }
-        } else {
-          if (displayText.length > 0) {
-            setDisplayText(displayText.slice(0, -1));
-          } else {
-            setIsDeleting(false);
-            setWordIndex((prev) => prev + 1);
-          }
-        }
-      },
-      isDeleting ? deletingSpeed : typingSpeed
-    );
-
-    return () => clearTimeout(timeout);
-  }, [
-    displayText,
-    isDeleting,
-    wordIndex,
-    words,
-    typingSpeed,
-    deletingSpeed,
-    pauseDuration,
-    isLocked,
-  ]);
-
-  return { displayText, isLocked };
-}
+const TYPING_SPEED = 80;
+const DELETING_SPEED = 40;
+const PAUSE_DURATION = 1500;
 
 export function NewHeroSection() {
-  const { displayText, isLocked } = useTypewriter(incidentTypes, 80, 40, 1500);
+  const { displayText, isLocked } = useTypewriter(
+    INCIDENT_TYPES,
+    TYPING_SPEED,
+    DELETING_SPEED,
+    PAUSE_DURATION
+  );
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 w-full min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-20 mt-[-81px]">
@@ -125,10 +78,8 @@ export function NewHeroSection() {
 
       <div className="relative z-10 w-full max-w-4xl text-center px-4">
         <h1 className="mb-6 text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl leading-tight">
-          {/* Line 1 */}
           One Platform.
           <br />
-          {/* Line 2 — typewriter line */}
           <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent inline-flex items-center justify-center">
             {displayText}
             <span
@@ -137,7 +88,6 @@ export function NewHeroSection() {
             />
           </span>
           <br />
-          {/* Line 3 */}
           Response.
         </h1>
 

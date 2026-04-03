@@ -1,19 +1,11 @@
-// hooks/use-typewriter.ts
 import { useEffect, useState } from 'react';
 
-interface UseTypewriterProps {
-  words: string[];
-  typingSpeed?: number;
-  deletingSpeed?: number;
-  pauseDuration?: number;
-}
-
-export function useTypewriter({
-  words,
-  typingSpeed = 500,
-  deletingSpeed = 250,
-  pauseDuration = 1000,
-}: UseTypewriterProps) {
+export function useTypewriter(
+  words: string[],
+  typingSpeed = 80,
+  deletingSpeed = 40,
+  pauseDuration = 1500
+) {
   const [displayText, setDisplayText] = useState('');
   const [wordIndex, setWordIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
