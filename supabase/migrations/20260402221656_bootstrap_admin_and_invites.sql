@@ -311,9 +311,7 @@ begin
     and bootstrap_state.reservation_expires_at >= timezone('utc', now())
   ) then
     insert into public.role_assignments (user_id, role, scope_type, scope_id)
-    values
-      (new.id, 'super_admin', 'global', null),
-      (new.id, 'admin', 'global', null)
+    values (new.id, 'super_admin', 'global', null)
     on conflict (user_id, role, scope_type, scope_id) do nothing;
 
     update private.bootstrap_registration_state
