@@ -81,7 +81,7 @@ export async function changeManagedUserRoleAction(
       throw error;
     }
 
-    revalidatePath('/control-center/team');
+    revalidatePath('/control-center/admin-panel');
 
     return {
       status: 'success',
@@ -140,7 +140,7 @@ export async function setManagedUserActivationAction(
       throw error;
     }
 
-    revalidatePath('/control-center/team');
+    revalidatePath('/control-center/admin-panel');
 
     return {
       status: 'success',

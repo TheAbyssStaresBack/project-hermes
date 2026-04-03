@@ -60,7 +60,7 @@ export function AppSidebar({
       ? [
           {
             title: 'Admin Panel',
-            url: '/control-center/team',
+            url: '/control-center/admin-panel',
             icon: IconUsers,
           },
         ]
