@@ -1,4 +1,5 @@
 'use client';
+import demoThumbnail from '@/components/brand/image.png';
 import { Button } from '@/components/ui/button';
 import { useTypewriter } from '@/hooks/use-typewriter';
 import { ArrowRight, Pause, Play } from 'lucide-react';
@@ -131,16 +132,17 @@ export function NewHeroSection() {
       </div>
 
       {/* Hero Video */}
-      <div className="relative z-10 mx-auto mt-7 w-full max-w-3xl px-4">
+      <div className="relative z-10 mx-auto mt-7 w-full max-w-2xl px-4">
         <div className="relative group">
           {/* Glow effect */}
-          <div className="absolute top-2 lg:-top-8 left-1/2 -translate-x-1/2 w-[90%] h-24 lg:h-80 bg-primary/50 rounded-full blur-3xl" />
+          {/* Changed w-[90%] to w-[50%] and lowered opacity */}
+          <div className="absolute top-2 lg:-top-8 left-1/2 -translate-x-1/2 w-[80%] h-20 lg:h-60 bg-primary/30 rounded-full blur-3xl" />
 
           <div className="relative rounded-xl border bg-card shadow-2xl overflow-hidden">
             {/* Thumbnail — visible only before first play */}
             {!hasStarted && (
               <Image
-                src="/demo-thumbnail.png"
+                src={demoThumbnail}
                 alt="Demo video thumbnail"
                 width={1200}
                 height={700}
@@ -159,9 +161,6 @@ export function NewHeroSection() {
               className={`w-full rounded-xl object-cover ${hasStarted ? 'block' : 'hidden'}`}
               onEnded={() => setIsPlaying(false)}
             />
-
-            {/* Bottom fade overlay */}
-            <div className="absolute bottom-0 left-0 w-full h-32 md:h-40 lg:h-48 bg-gradient-to-b from-background/0 via-background/70 to-background rounded-b-xl pointer-events-none" />
 
             {/* Play / Pause button overlay */}
             <div
