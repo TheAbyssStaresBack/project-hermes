@@ -1,7 +1,9 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { useTypewriter } from '@/hooks/use-typewriter';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight, Pause, Play } from 'lucide-react';
+import Image from 'next/image';
+import { useRef, useState } from 'react';
 
 const INCIDENT_TYPES = [
   'Fire',
@@ -26,8 +28,26 @@ export function NewHeroSection() {
     PAUSE_DURATION
   );
 
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isPlaying) {
+      video.pause();
+      setIsPlaying(false);
+    } else {
+      video.play();
+      setIsPlaying(true);
+      setHasStarted(true);
+    }
+  };
+
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 w-full min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-20 mt-[-81px]">
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 w-full min-h-[calc(100vh-64px)] flex flex-col items-center justify-center px-4 py-20 mt-[-81px]">
       <style>{`
         .hero-grid::before {
           content: '';
@@ -76,6 +96,7 @@ export function NewHeroSection() {
 
       <div className="hero-grid absolute inset-0" />
 
+      {/* Hero Text + CTA */}
       <div className="relative z-10 w-full max-w-4xl text-center px-4">
         <h1 className="mb-6 text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl leading-tight">
           One Platform.
@@ -106,6 +127,64 @@ export function NewHeroSection() {
             <Play className="h-4 w-4" />
             Watch Demo
           </Button>
+        </div>
+      </div>
+
+      {/* Hero Video */}
+      <div className="relative z-10 mx-auto mt-7 w-full max-w-3xl px-4">
+        <div className="relative group">
+          {/* Glow effect */}
+          <div className="absolute top-2 lg:-top-8 left-1/2 -translate-x-1/2 w-[90%] h-24 lg:h-80 bg-primary/50 rounded-full blur-3xl" />
+
+          <div className="relative rounded-xl border bg-card shadow-2xl overflow-hidden">
+            {/* Thumbnail — visible only before first play */}
+            {!hasStarted && (
+              <Image
+                src="/demo-thumbnail.png"
+                alt="Demo video thumbnail"
+                width={1200}
+                height={700}
+                className="w-full rounded-xl object-cover"
+                priority
+              />
+            )}
+
+            {/* Video — rendered always but hidden until started to avoid layout shift */}
+            <video
+              ref={videoRef}
+              src="/demo.mp4"
+              width={1200}
+              height={700}
+              playsInline
+              className={`w-full rounded-xl object-cover ${hasStarted ? 'block' : 'hidden'}`}
+              onEnded={() => setIsPlaying(false)}
+            />
+
+            {/* Bottom fade overlay */}
+            <div className="absolute bottom-0 left-0 w-full h-32 md:h-40 lg:h-48 bg-gradient-to-b from-background/0 via-background/70 to-background rounded-b-xl pointer-events-none" />
+
+            {/* Play / Pause button overlay */}
+            <div
+              className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+                isPlaying
+                  ? 'bg-transparent opacity-0 group-hover:opacity-100'
+                  : 'bg-black/20 opacity-100'
+              }`}
+            >
+              <Button
+                size="lg"
+                onClick={togglePlay}
+                aria-label={isPlaying ? 'Pause demo video' : 'Play demo video'}
+                className="rounded-full h-16 w-16 p-0 hover:scale-105 transition-transform"
+              >
+                {isPlaying ? (
+                  <Pause className="h-6 w-6 fill-current" />
+                ) : (
+                  <Play className="h-6 w-6 fill-current" />
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
