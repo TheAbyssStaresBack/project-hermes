@@ -1,5 +1,13 @@
 import type { BotThread } from '@/lib/bot/types';
-import { compose, maxLength, minLength, required } from '../steps/validators';
+import { toPoint } from '@/lib/geo';
+import { createDefaultGeocodingService } from '@/lib/geocoding';
+import {
+  compose,
+  isGeometryPoint,
+  maxLength,
+  minLength,
+  required,
+} from '../steps/validators';
 import type { Flow } from './flow-types';
 import { parseFreeformIncidentReport } from './incident-ai-parser';
 import {
@@ -7,6 +15,8 @@ import {
   isIncidentSeverity,
   submitIncidentReport,
 } from './incident-reporting-service';
+
+const geocodingService = createDefaultGeocodingService();
 
 /**
  * Freeform incident reporting flow for onboarded residents.
@@ -44,11 +54,65 @@ export const incidentReportingFreeformFlow: Flow = {
           allowedIncidentTypeNames: incidentTypeNames,
         });
 
+        let parsedLocation: ReturnType<typeof toPoint>;
+        let needsLocationInput = false;
+
+        try {
+          const geocodingResults = await geocodingService.forwardGeocode(
+            parsed.locationDescription,
+            { limit: 1 }
+          );
+          const bestMatch = geocodingResults[0];
+          if (bestMatch?.point) {
+            parsedLocation = toPoint(bestMatch.point);
+          } else {
+            needsLocationInput = true;
+          }
+        } catch (error) {
+          console.error('Freeform location geocoding error:', error);
+          needsLocationInput = true;
+        }
+
         return {
           parsedIncidentTypeName: parsed.incidentTypeName,
           parsedSeverity: parsed.severity,
           parsedDescription: parsed.description,
           parsedLocationDescription: parsed.locationDescription,
+          ...(parsedLocation ? { parsedLocation } : {}),
+          requiresLocationInput: needsLocationInput,
+        };
+      },
+      nextStep: (data) => {
+        const parsedLocation = toPoint(data.parsedLocation);
+        if (parsedLocation) {
+          return 'review_submission';
+        }
+
+        return 'location_input';
+      },
+    },
+    {
+      id: 'location_input',
+      type: 'location',
+      prompt:
+        'I could not map the location from your report. Please send your location pin or type a nearby place/address.',
+      validations: [isGeometryPoint],
+      dataKey: 'parsedLocation',
+      resolveLocationDescription: true,
+      onAfterParse: async (value) => {
+        const parsedLocation = value as {
+          locationDescription?: unknown;
+        };
+
+        if (typeof parsedLocation.locationDescription === 'string') {
+          return {
+            parsedLocationDescription: parsedLocation.locationDescription,
+            requiresLocationInput: false,
+          };
+        }
+
+        return {
+          requiresLocationInput: false,
         };
       },
     },
@@ -109,6 +173,7 @@ export const incidentReportingFreeformFlow: Flow = {
       const severity = data.parsedSeverity;
       const description = data.parsedDescription;
       const locationDescription = data.parsedLocationDescription;
+      const parsedLocation = toPoint(data.parsedLocation);
 
       if (
         typeof incidentTypeName !== 'string' ||
@@ -132,6 +197,7 @@ export const incidentReportingFreeformFlow: Flow = {
         incidentTypeName,
         severity,
         description,
+        location: parsedLocation,
         locationDescription,
       });
 
