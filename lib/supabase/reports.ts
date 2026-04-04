@@ -194,3 +194,47 @@ export function subscribeToIncidents(
     )
     .subscribe();
 }
+
+export async function fetchIncidentTypeName(
+  id: string
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('incident_types')
+      .select('name')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching incident:', error);
+      return null;
+    }
+
+    return data.name;
+  } catch (error) {
+    console.error('Database fetch error:', error);
+    return null;
+  }
+}
+
+export async function fetchKanbanCategoryContents(
+  category: string,
+  count: number = 50
+): Promise<Incident[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from('incidents')
+      .select()
+      .eq('status', category)
+      .limit(count);
+    if (error) {
+      console.error('Error fetching incident:', error);
+      return null;
+    }
+
+    return data as Incident[];
+  } catch (error) {
+    console.error('Database fetch error:', error);
+    return null;
+  }
+}

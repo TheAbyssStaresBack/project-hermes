@@ -3,7 +3,8 @@
 import IncidentEntry from '@/components/control-center/incidents/report-view/report-list//incident-entry';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import React, { useState } from 'react';
+import { fetchKanbanCategoryContents, Incident } from '@/lib/supabase/reports';
+import React, { useEffect, useState } from 'react';
 import CategoryCard from './category';
 
 interface KanbanContentProps {
@@ -13,15 +14,6 @@ interface KanbanContentProps {
   className?: string;
 }
 
-function getIncidentData(count: number = 50) {
-  // TODO: replace function to fetch content from database
-  const entries = [];
-  for (let i = 0; i < count; i++) {
-    entries.push(i.toString());
-  }
-  return entries;
-}
-
 function KanbanContent({
   title,
   incidentCount = 50,
@@ -29,30 +21,61 @@ function KanbanContent({
   className = '',
 }: KanbanContentProps) {
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
+  const [incidents, setIncidents] = useState<Incident[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Map title to category status
+  const categoryMap: Record<string, string> = {
+    New: 'new',
+    Validated: 'validated',
+    In_Progress: 'in_progress',
+    Resolved: 'resolved',
+    Dismissed: 'dismissed',
+  };
 
   const handleIncidentClick = (id: string) => {
     setSelectedIncident(id);
     onIncidentSelect?.(id);
   };
 
-  const incidents = getIncidentData(incidentCount);
+  // Fetch incidents whenever title or incidentCount changes
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const category = categoryMap[title] || title.toLowerCase();
+      const incidentArray = await fetchKanbanCategoryContents(
+        category,
+        incidentCount
+      );
+      setIncidents(incidentArray);
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [title, incidentCount]); // ← Add dependency array
 
   return (
     <CategoryCard title={title} className={className}>
       <ScrollArea className="h-full rounded-md flex max-h-[calc(100vh-275px)]">
         <div className="p-4">
-          {incidents.map((incidentId, index) => (
-            <React.Fragment key={incidentId}>
-              <div className="text-sm">
-                <IncidentEntry
-                  id={incidentId}
-                  isSelected={selectedIncident === incidentId}
-                  onClick={handleIncidentClick}
-                />
-              </div>
-              {index < incidents.length - 1 && <Separator className="my-2" />}
-            </React.Fragment>
-          ))}
+          {loading ? (
+            <p className="text-sm text-gray-500">Loading incidents...</p>
+          ) : incidents && incidents.length > 0 ? (
+            incidents.map((incident, index) => (
+              <React.Fragment key={incident.id}>
+                <div className="text-sm">
+                  <IncidentEntry
+                    id={incident.incident_time}
+                    isSelected={selectedIncident === incident.id}
+                    onClick={handleIncidentClick}
+                  />
+                </div>
+                {index < incidents.length - 1 && <Separator className="my-2" />}
+              </React.Fragment>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500">No incidents found</p>
+          )}
         </div>
       </ScrollArea>
     </CategoryCard>
