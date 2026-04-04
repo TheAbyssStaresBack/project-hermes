@@ -1,6 +1,6 @@
 'use client';
 
-import { Incident } from '@/lib/supabase/reports';
+import { fetchIncidents, Incident } from '@/lib/supabase/reports';
 import * as React from 'react';
 import KanbanContent from './kanban-view/content';
 import ChatBox from './report-view/chatbox';
@@ -11,15 +11,30 @@ interface TabsProps {
   defaultTab?: string;
 }
 
+function getLatestIncident(): string | null {
+  const latestIncident = fetchIncidents(1);
+  let latestIncidentID: string | null = null;
+
+  latestIncident.then((incident: Incident[] | null) => {
+    if (incident) latestIncidentID = incident[0].id;
+  });
+
+  return latestIncidentID;
+}
+
 export function IncidentTabs({ defaultTab = 'reports' }: TabsProps) {
+  // prevent scrolling by the user
   React.useEffect(() => {
     document.body.style.overflow = 'hidden';
   }, []);
 
   const [activeTab, setActiveTab] = React.useState(defaultTab);
+  const [selectedIncidentID, setSelectedIncidentID] = React.useState<
+    string | null
+  >(getLatestIncident());
 
-  const handleOnIncidentClick = (incident: Incident) => {
-    console.log(incident);
+  const handleOnIncidentClick = (clickedIncidentID: string) => {
+    setSelectedIncidentID(clickedIncidentID);
   };
 
   const tabs = [
@@ -30,7 +45,7 @@ export function IncidentTabs({ defaultTab = 'reports' }: TabsProps) {
         <div className="p-4 flex flex-ro gap-4 overflow-auto">
           <IncidentCard onIncidentSelect={handleOnIncidentClick} />
           <ChatBox />
-          <ReportContainer />
+          <ReportContainer incident={selectedIncidentID} />
         </div>
       ),
     },

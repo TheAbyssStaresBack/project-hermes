@@ -52,11 +52,11 @@ function KanbanContent({
     };
 
     fetchData();
-  }, [title, incidentCount]); // ← Add dependency array
+  }, [title, incidentCount]); // Add dependency array to prevent GET each render
 
   return (
     <CategoryCard title={title} className={className}>
-      <ScrollArea className="h-full rounded-md flex max-h-[calc(100vh-275px)]">
+      <ScrollArea className="h-full rounded-md flex h-[calc(100vh-275px)]">
         <div className="p-4">
           {loading ? (
             <p className="text-sm text-gray-500">Loading incidents...</p>

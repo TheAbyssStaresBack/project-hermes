@@ -7,7 +7,7 @@ import * as React from 'react';
 import IncidentEntry from './incident-entry';
 
 interface IncidentListProps {
-  onIncidentSelect?: (incident: Incident) => void;
+  onIncidentSelect?: (incidentID: string) => void;
 }
 
 async function getReportData(count: number = 50): Promise<Incident[] | null> {
@@ -44,10 +44,7 @@ export function IncidentList({ onIncidentSelect }: IncidentListProps) {
 
   const handleIncidentClick = (id: string) => {
     setSelectedIncident(id);
-    const selectedIncidentData = incidents.find((inc) => inc.id === id);
-    if (selectedIncidentData) {
-      onIncidentSelect!(selectedIncidentData);
-    }
+    if (id) onIncidentSelect!(id);
   };
 
   if (loading) return <div>Loading...</div>;

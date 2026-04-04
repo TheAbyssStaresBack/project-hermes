@@ -18,14 +18,27 @@ export interface Incident {
   updated_at: string;
 }
 
-// Fetch incidents based on count
 export async function fetchIncidents(
   count: number = 50
 ): Promise<Incident[] | null> {
   try {
     const { data, error } = await supabase
       .from('incidents')
-      .select()
+      .select(
+        `id,
+        reported_by,
+        incident_type_id,
+        location,
+        location_description,
+        severity,
+        description,
+        status,
+        incident_time,
+        created_at,
+        updated_at,
+        residents (name),
+        incident_types (name)`
+      )
       .order('created_at', { ascending: false })
       .limit(count);
 
@@ -34,7 +47,23 @@ export async function fetchIncidents(
       return null;
     }
 
-    return data as Incident[];
+    // Transform the data to flatten the relationships
+    const transformedData = data.map((incident) => ({
+      id: incident.id,
+      reported_by: incident.residents?.[0]?.name || incident.reported_by,
+      incident_type_id:
+        incident.incident_types?.[0]?.name || incident.incident_type_id,
+      location: incident.location,
+      location_description: incident.location_description,
+      severity: incident.severity,
+      description: incident.description,
+      status: incident.status,
+      incident_time: incident.incident_time,
+      created_at: incident.created_at,
+      updated_at: incident.updated_at,
+    }));
+
+    return transformedData as Incident[];
   } catch (error) {
     console.error('Database fetch error:', error);
     return null;
@@ -54,6 +83,9 @@ export async function fetchIncidentById(id: string): Promise<Incident | null> {
       console.error('Error fetching incident:', error);
       return null;
     }
+
+    // TODO : Remove after debugging
+    console.log(data);
 
     return data as Incident;
   } catch (error) {
@@ -201,6 +233,26 @@ export async function fetchIncidentTypeName(
   try {
     const { data, error } = await supabase
       .from('incident_types')
+      .select('name')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching incident:', error);
+      return null;
+    }
+
+    return data.name;
+  } catch (error) {
+    console.error('Database fetch error:', error);
+    return null;
+  }
+}
+
+export async function fetchResidentName(id: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('residents')
       .select('name')
       .eq('id', id)
       .single();

@@ -6,16 +6,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Incident } from '@/lib/supabase/reports';
 import { IncidentList } from './incident-list';
 
 interface IncidentCardProps {
-  onIncidentSelect?: (incident: Incident) => void;
+  onIncidentSelect?: (incidentID: string) => void;
 }
 
 export default function IncidentsCard({ onIncidentSelect }: IncidentCardProps) {
-  const handleIncidentSelect = (incident: Incident) => {
-    if (incident) onIncidentSelect!(incident);
+  const handleIncidentSelect = (incidentID: string) => {
+    if (incidentID) onIncidentSelect!(incidentID);
   };
 
   // TODO: refactor measurements to accept relative values

@@ -1,11 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import {
+  fetchIncidentById,
+  fetchIncidentTypeName,
+  fetchResidentName,
+  Incident,
+} from '@/lib/supabase/reports';
+import { convertTime, hexToCoordinates } from '@/lib/utils';
+import React from 'react';
 
 interface FormData {
   id: string;
   reported_by: string;
-  incident_type_id: string;
+  incident_name: string | null;
   location: string;
   location_description: string;
   severity: string;
@@ -16,11 +23,47 @@ interface FormData {
   updated_at: string;
 }
 
-export default function ReportDetails() {
-  const [formData, setFormData] = useState<FormData>({
+interface ReportDetailsProps {
+  incidentID?: string | null;
+}
+
+async function searchIncidentById(
+  incidentID: string
+): Promise<Incident | null> {
+  const incident = await fetchIncidentById(incidentID);
+  return incident;
+}
+
+async function getIncidentName(
+  incidentTypeID: string | null
+): Promise<string | null> {
+  let incidentName: string | null = '';
+  if (incidentTypeID)
+    incidentName = await fetchIncidentTypeName(incidentTypeID);
+  return incidentName;
+}
+
+async function getResidentName(
+  residentID: string | null
+): Promise<string | null> {
+  let residentName: string | null = '';
+  if (residentID) residentName = await fetchResidentName(residentID);
+  return residentName;
+}
+
+function getFormattedLocation(coordinates: string): string | null {
+  console.log(coordinates);
+  if (!coordinates) return null;
+
+  return hexToCoordinates(coordinates);
+}
+
+export default function ReportDetails({ incidentID }: ReportDetailsProps) {
+  const listStyle = 'bg-white text-gray-900 dark:bg-gray-800 dark:text-white';
+  const [formData, setFormData] = React.useState<FormData>({
     id: '',
     reported_by: '',
-    incident_type_id: '',
+    incident_name: '',
     location: '',
     location_description: '',
     severity: '',
@@ -30,6 +73,46 @@ export default function ReportDetails() {
     created_at: '',
     updated_at: '',
   });
+
+  // TODO: refactor this block (ideally change query to automatically retrieve
+  // respondent name and incident type name
+  function retrieveIncidentName(incident: Incident | null) {
+    if (incident) {
+      getIncidentName(incident.incident_type_id).then((incidentName) => {
+        getResidentName(incident.reported_by).then((residentName) => {
+          console.log(residentName);
+          setFormData({
+            id: incident.id ?? '',
+            reported_by: residentName ?? '',
+            incident_name: incidentName ?? '',
+            location: getFormattedLocation(incident.location) ?? '',
+            location_description: incident.location_description ?? '',
+            severity: incident.severity ?? '',
+            description: incident.description ?? '',
+            status: incident.status ?? '',
+            incident_time: convertTime(incident.incident_time) ?? '',
+            created_at: convertTime(incident.created_at) ?? '',
+            updated_at: convertTime(incident.updated_at) ?? '',
+          });
+        });
+      });
+    }
+  }
+
+  // Fetch incident data when incidentID changes
+  React.useEffect(() => {
+    if (incidentID) {
+      searchIncidentById(incidentID).then((incident) =>
+        retrieveIncidentName(incident)
+      );
+    }
+  }, [incidentID]); // Re-run when incidentID changes
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    console.log('Form Data:', formData);
+    // Handle form submission here
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -43,19 +126,10 @@ export default function ReportDetails() {
     }));
   };
 
-  // TODO: change to report id fetching from database
-  const reportID = 777777;
-  const listStyle = 'bg-white text-gray-900 dark:bg-gray-800 dark:text-white';
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log('Form Data:', formData);
-    // Handle form submission here
-  };
-
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold mb-6">Report Details (#{reportID})</h1>
+      <h1 className="text-3xl font-bold mb-6">Report Details</h1>
+      <h2 className="text-xl font-bold mb-6">Report ID: (#{formData.id})</h2>
 
       {/* ID (read-only or hidden) */}
       <div className="hidden">
@@ -73,25 +147,25 @@ export default function ReportDetails() {
           name="reported_by"
           value={formData.reported_by}
           onChange={handleChange}
-          placeholder="Enter reporter Name"
+          placeholder="Enter Reporter Name"
           className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           required
         />
       </div>
 
-      {/* TODO: add additional incident types as necessary */}
+      {/* TODO: make selection update with more incident types*/}
       {/* Incident Type */}
       <div>
         <label
           htmlFor="incident_type_id"
           className="block text-sm font-medium mb-2"
         >
-          Incident Type
+          Incident Type:
         </label>
         <select
           id="incident_type_id"
           name="incident_type_id"
-          value={formData.incident_type_id}
+          value={formData.incident_name ? formData.incident_name : ''}
           onChange={handleChange}
           className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:ring-blue-400"
           required
@@ -99,17 +173,26 @@ export default function ReportDetails() {
           <option value="" className={listStyle}>
             Select Incident Type
           </option>
-          <option value="vehicleAccident" className={listStyle}>
-            Vehicular Accident
+          <option value="Traffic Accident" className={listStyle}>
+            Traffic Accident
           </option>
-          <option value="flooding" className={listStyle}>
-            Flooding
+          <option value="Flood" className={listStyle}>
+            Flood
           </option>
-          <option value="fire" className={listStyle}>
+          <option value="Fire" className={listStyle}>
             Fire
           </option>
-          <option value="other" className={listStyle}>
-            Other
+          <option value="Earthquake" className={listStyle}>
+            Earthquake
+          </option>
+          <option value="Landslide" className={listStyle}>
+            Landslide
+          </option>
+          <option value="Storm" className={listStyle}>
+            Storm
+          </option>
+          <option value="Medical Emergency" className={listStyle}>
+            Medical Emergency
           </option>
         </select>
       </div>
@@ -117,7 +200,7 @@ export default function ReportDetails() {
       {/* Location */}
       <div>
         <label htmlFor="location" className="block text-sm font-medium mb-2">
-          Location (Point, 4326)
+          Location (Point, 4326):
         </label>
         <input
           type="text"
@@ -153,7 +236,7 @@ export default function ReportDetails() {
       {/* Severity */}
       <div>
         <label htmlFor="severity" className="block text-sm font-medium mb-2">
-          Severity
+          Severity:
         </label>
         <select
           id="severity"
@@ -169,8 +252,8 @@ export default function ReportDetails() {
           <option value="low" className={listStyle}>
             Low
           </option>
-          <option value="medium" className={listStyle}>
-            Medium
+          <option value="moderate" className={listStyle}>
+            Moderate
           </option>
           <option value="high" className={listStyle}>
             High
@@ -184,7 +267,7 @@ export default function ReportDetails() {
       {/* Description */}
       <div>
         <label htmlFor="description" className="block text-sm font-medium mb-2">
-          Description
+          Description:
         </label>
         <textarea
           id="description"
@@ -200,7 +283,7 @@ export default function ReportDetails() {
       {/* Status */}
       <div>
         <label htmlFor="status" className="block text-sm font-medium mb-2">
-          Status
+          Status:
         </label>
         <select
           id="status"
@@ -213,8 +296,11 @@ export default function ReportDetails() {
           <option value="" className={listStyle}>
             Select status
           </option>
-          <option value="open" className={listStyle}>
-            Open
+          <option value="new" className={listStyle}>
+            New
+          </option>
+          <option value="validated" className={listStyle}>
+            Validated
           </option>
           <option value="in_progress" className={listStyle}>
             In Progress
@@ -222,8 +308,8 @@ export default function ReportDetails() {
           <option value="resolved" className={listStyle}>
             Resolved
           </option>
-          <option value="closed" className={listStyle}>
-            Closed
+          <option value="dismissed" className={listStyle}>
+            Dismissed
           </option>
         </select>
       </div>
@@ -234,7 +320,7 @@ export default function ReportDetails() {
           htmlFor="incident_time"
           className="block text-sm font-medium mb-2"
         >
-          Incident Time
+          Incident Time:
         </label>
         <input
           type="datetime-local"
@@ -250,7 +336,7 @@ export default function ReportDetails() {
       {/* Created At (read-only) */}
       <div>
         <label htmlFor="created_at" className="block text-sm font-medium mb-2">
-          Created At
+          Created At:
         </label>
         <input
           type="datetime-local"
@@ -266,7 +352,7 @@ export default function ReportDetails() {
       {/* Updated At (read-only) */}
       <div>
         <label htmlFor="updated_at" className="block text-sm font-medium mb-2">
-          Updated At
+          Updated At:
         </label>
         <input
           type="datetime-local"
@@ -289,21 +375,7 @@ export default function ReportDetails() {
         </button>
         <button
           type="reset"
-          onClick={() =>
-            setFormData({
-              id: '',
-              reported_by: '',
-              incident_type_id: '',
-              location: '',
-              location_description: '',
-              severity: '',
-              description: '',
-              status: '',
-              incident_time: '',
-              created_at: '',
-              updated_at: '',
-            })
-          }
+          onClick={() => {}}
           className="px-6 py-2 bg-gray-300 text-gray-800 font-medium rounded-md hover:bg-gray-400 transition-colors"
         >
           Clear

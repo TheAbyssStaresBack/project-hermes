@@ -7,10 +7,12 @@ import ReportDetails from './report-details';
 
 interface ReportContainerProps {
   defaultTab?: string;
+  incident: string | null;
 }
 
 export const ReportContainer: React.FC<ReportContainerProps> = ({
   defaultTab = 'details',
+  incident,
 }) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
 
@@ -20,7 +22,7 @@ export const ReportContainer: React.FC<ReportContainerProps> = ({
       label: 'Report Details',
       content: (
         <div className="p-4">
-          <ReportDetails />
+          <ReportDetails incidentID={incident} />
         </div>
       ),
     },
