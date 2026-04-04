@@ -1,5 +1,6 @@
 'use client';
 
+import Wordmark from '@/components/brand/wordmark';
 import { Card, CardContent } from '@/components/ui/card';
 import { CardDecorator } from '@/components/ui/card-decorator';
 import { Code, Crown, Layout, Palette } from 'lucide-react';
@@ -33,13 +34,16 @@ const values = [
 
 export function AboutSection() {
   return (
-    <section id="about" className="py-24 sm:py-32">
+    <section id="about" className="py-20 sm:py-32 -mt-20 relative w-full">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="mx-auto max-w-4xl text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-            Built for developers, by developers
+            Introducing
           </h2>
+          <div className="flex h-28 justify-center mb-4">
+            <Wordmark />
+          </div>
           <p className="text-lg text-muted-foreground mb-8">
             We&apos;re passionate about creating the best marketplace for
             shadcn/ui components and templates. Our mission is to accelerate
