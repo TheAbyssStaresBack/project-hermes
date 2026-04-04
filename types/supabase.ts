@@ -139,6 +139,33 @@ export type Database = {
           },
         ];
       };
+      advisory_templates: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          message: string;
+          name: string;
+          title: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          message: string;
+          name: string;
+          title: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          message?: string;
+          name?: string;
+          title?: string;
+        };
+        Relationships: [];
+      };
       incident_types: {
         Row: {
           created_at: string;

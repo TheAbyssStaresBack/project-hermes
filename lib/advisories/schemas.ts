@@ -12,3 +12,9 @@ export const createAdvisorySchema = z.object({
     .min(1, 'Message is required.')
     .max(2000, 'Message must be 2000 characters or fewer.'),
 });
+
+export const advisoryTemplateNameSchema = z
+  .string()
+  .trim()
+  .min(1, 'Template name is required when saving a template.')
+  .max(80, 'Template name must be 80 characters or fewer.');

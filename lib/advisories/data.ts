@@ -3,7 +3,7 @@ import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
-import type { AdvisoryListItem } from './types';
+import type { AdvisoryListItem, AdvisoryTemplateItem } from './types';
 
 export async function getRecentAdvisories(limit: number = 20) {
   const supabase = await createClient();
@@ -58,4 +58,18 @@ export async function getRecentAdvisories(limit: number = 20) {
       ? (creatorNameById.get(item.created_by) ?? null)
       : null,
   }));
+}
+
+export async function getAdvisoryTemplates() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('advisory_templates')
+    .select('id, name, title, message, created_at, created_by')
+    .order('name', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as AdvisoryTemplateItem[];
 }

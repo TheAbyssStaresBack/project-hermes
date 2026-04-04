@@ -10,7 +10,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/types/supabase';
 
-import { createAdvisorySchema } from './schemas';
+import { advisoryTemplateNameSchema, createAdvisorySchema } from './schemas';
 import {
   INITIAL_ADVISORY_ACTION_STATE,
   type AdvisoryActionState,
@@ -88,6 +88,9 @@ export async function createAdvisoryAction(
   void previousState;
 
   const actor = await requireRole(['responder', 'admin', 'super_admin']);
+  const intent = formData.get('intent');
+  const normalizedIntent =
+    intent === 'save_template' ? 'save_template' : 'send';
   const validatedFields = createAdvisorySchema.safeParse({
     title: formData.get('title'),
     message: formData.get('message'),
@@ -103,6 +106,61 @@ export async function createAdvisoryAction(
 
   try {
     const supabase = await createClient();
+
+    if (normalizedIntent === 'save_template') {
+      const templateNameValidation = advisoryTemplateNameSchema.safeParse(
+        formData.get('templateName')
+      );
+
+      if (!templateNameValidation.success) {
+        return {
+          status: 'error',
+          message: 'Please enter a valid template name.',
+          fieldErrors: {
+            templateName: templateNameValidation.error.flatten().formErrors,
+          },
+        };
+      }
+
+      const { error: templateInsertError } = await supabase
+        .from('advisory_templates')
+        .insert({
+          name: templateNameValidation.data,
+          title: validatedFields.data.title,
+          message: validatedFields.data.message,
+          created_by: actor.id,
+        });
+
+      if (templateInsertError) {
+        const duplicateTemplate =
+          templateInsertError.code === '23505' ||
+          templateInsertError.message.includes(
+            'advisory_templates_creator_name_key'
+          );
+
+        return {
+          status: 'error',
+          message: duplicateTemplate
+            ? 'A template with this name already exists in your library.'
+            : templateInsertError.message,
+          fieldErrors: duplicateTemplate
+            ? {
+                templateName: [
+                  'Use another template name or edit the existing one.',
+                ],
+              }
+            : undefined,
+        };
+      }
+
+      revalidatePath('/control-center/advisories');
+
+      return {
+        status: 'success',
+        message: 'Template saved to your advisory library.',
+      };
+    }
+
     const adminClient = createAdminClient();
 
     const { data: insertedAdvisory, error: insertAdvisoryError } =
