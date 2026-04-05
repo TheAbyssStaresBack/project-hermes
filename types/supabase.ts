@@ -173,6 +173,120 @@ export type Database = {
         };
         Relationships: [];
       };
+      chat_state_cache: {
+        Row: {
+          cache_key: string;
+          expires_at: string | null;
+          key_prefix: string;
+          updated_at: string;
+          value: string;
+        };
+        Insert: {
+          cache_key: string;
+          expires_at?: string | null;
+          key_prefix: string;
+          updated_at?: string;
+          value: string;
+        };
+        Update: {
+          cache_key?: string;
+          expires_at?: string | null;
+          key_prefix?: string;
+          updated_at?: string;
+          value?: string;
+        };
+        Relationships: [];
+      };
+      chat_state_lists: {
+        Row: {
+          expires_at: string | null;
+          key_prefix: string;
+          list_key: string;
+          seq: number;
+          value: string;
+        };
+        Insert: {
+          expires_at?: string | null;
+          key_prefix: string;
+          list_key: string;
+          seq?: number;
+          value: string;
+        };
+        Update: {
+          expires_at?: string | null;
+          key_prefix?: string;
+          list_key?: string;
+          seq?: number;
+          value?: string;
+        };
+        Relationships: [];
+      };
+      chat_state_locks: {
+        Row: {
+          expires_at: string;
+          key_prefix: string;
+          thread_id: string;
+          token: string;
+          updated_at: string;
+        };
+        Insert: {
+          expires_at: string;
+          key_prefix: string;
+          thread_id: string;
+          token: string;
+          updated_at?: string;
+        };
+        Update: {
+          expires_at?: string;
+          key_prefix?: string;
+          thread_id?: string;
+          token?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      chat_state_queues: {
+        Row: {
+          expires_at: string;
+          key_prefix: string;
+          seq: number;
+          thread_id: string;
+          value: string;
+        };
+        Insert: {
+          expires_at: string;
+          key_prefix: string;
+          seq?: number;
+          thread_id: string;
+          value: string;
+        };
+        Update: {
+          expires_at?: string;
+          key_prefix?: string;
+          seq?: number;
+          thread_id?: string;
+          value?: string;
+        };
+        Relationships: [];
+      };
+      chat_state_subscriptions: {
+        Row: {
+          created_at: string;
+          key_prefix: string;
+          thread_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          key_prefix: string;
+          thread_id: string;
+        };
+        Update: {
+          created_at?: string;
+          key_prefix?: string;
+          thread_id?: string;
+        };
+        Relationships: [];
+      };
       incident_types: {
         Row: {
           created_at: string;
@@ -349,6 +463,51 @@ export type Database = {
       };
     };
     Views: {
+      incidents_with_details: {
+        Row: {
+          created_at: string | null;
+          description: string | null;
+          id: string | null;
+          incident_time: string | null;
+          incident_type_id: string | null;
+          incident_type_name: string | null;
+          latitude: number | null;
+          location_description: string | null;
+          longitude: number | null;
+          reported_by: string | null;
+          reporter_name: string | null;
+          reporter_platform:
+            | Database['public']['Enums']['resident_platform']
+            | null;
+          reporter_thread_id: string | null;
+          severity: Database['public']['Enums']['incident_severity'] | null;
+          status: Database['public']['Enums']['incident_status'] | null;
+          updated_at: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'incidents_incident_type_id_fkey';
+            columns: ['incident_type_id'];
+            isOneToOne: false;
+            referencedRelation: 'incident_types';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'incidents_reported_by_fkey';
+            columns: ['reported_by'];
+            isOneToOne: false;
+            referencedRelation: 'residents';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'incidents_reported_by_fkey';
+            columns: ['reported_by'];
+            isOneToOne: false;
+            referencedRelation: 'residents_with_coords';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       residents_with_coords: {
         Row: {
           created_at: string | null;
