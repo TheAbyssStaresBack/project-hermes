@@ -39,6 +39,12 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(
     markers[0]?.id ?? null
   );
+  const [activeDestination, setActiveDestination] =
+    useState<DestinationMarker>(destination);
+  const [locationStatus, setLocationStatus] = useState<
+    'idle' | 'requesting' | 'granted' | 'fallback'
+  >('idle');
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>(
     []
   );
@@ -55,16 +61,14 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
     null;
   const hasMarkers = markers.length > 0;
 
-  const markerMapCenter: [number, number] = hasMarkers
-    ? [markers[0].longitude, markers[0].latitude]
-    : [destination.longitude, destination.latitude];
-
-  const routeMapCenter: [number, number] = selectedMarker
+  const mapCenter: [number, number] = selectedMarker
     ? [
-        (selectedMarker.longitude + destination.longitude) / 2,
-        (selectedMarker.latitude + destination.latitude) / 2,
+        (selectedMarker.longitude + activeDestination.longitude) / 2,
+        (selectedMarker.latitude + activeDestination.latitude) / 2,
       ]
-    : [destination.longitude, destination.latitude];
+    : hasMarkers
+      ? [markers[0].longitude, markers[0].latitude]
+      : [activeDestination.longitude, activeDestination.latitude];
 
   const selectedIncidentTime = selectedMarker?.incidentTime
     ? new Date(selectedMarker.incidentTime).toLocaleString('en-PH', {
@@ -74,6 +78,50 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
     : null;
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+      setActiveDestination(destination);
+      setLocationStatus('fallback');
+      setLocationMessage('Location unavailable, using the MDRRMO destination.');
+      return;
+    }
+
+    setLocationStatus('requesting');
+    setLocationMessage('Requesting your location for route guidance.');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setActiveDestination({
+          id: 'user-location',
+          longitude: position.coords.longitude,
+          latitude: position.coords.latitude,
+          label: 'Your location',
+        });
+        setLocationStatus('granted');
+        setLocationMessage('Using your location as the route destination.');
+      },
+      () => {
+        setActiveDestination(destination);
+        setLocationStatus('fallback');
+        setLocationMessage(
+          'Location permission denied, using the MDRRMO destination.'
+        );
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
+  }, [destination]);
+
+  useEffect(() => {
+    if (locationStatus === 'idle' || locationStatus === 'requesting') {
+      setRouteCoordinates([]);
+      setRouteStatus('idle');
+      setRouteErrorMessage(null);
+      return;
+    }
+
     if (!selectedMarker) {
       setRouteCoordinates([]);
       setRouteStatus('idle');
@@ -91,8 +139,8 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
         const params = new URLSearchParams({
           startLng: String(selectedMarker.longitude),
           startLat: String(selectedMarker.latitude),
-          endLng: String(destination.longitude),
-          endLat: String(destination.latitude),
+          endLng: String(activeDestination.longitude),
+          endLat: String(activeDestination.latitude),
         });
 
         const response = await fetch(
@@ -139,122 +187,97 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
     return () => {
       controller.abort();
     };
-  }, [destination.latitude, destination.longitude, selectedMarker]);
+  }, [
+    activeDestination.latitude,
+    activeDestination.longitude,
+    locationStatus,
+    selectedMarker,
+  ]);
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.4fr]">
-        <Card className="relative h-[340px] overflow-hidden p-0 lg:h-[520px]">
-          <Map center={markerMapCenter} zoom={hasMarkers ? 14 : 13}>
-            {markers.map((marker) => {
-              const isSelected = marker.id === selectedMarker?.id;
+      <Card className="relative h-[380px] overflow-hidden p-0 lg:h-[560px]">
+        <Map
+          center={mapCenter}
+          zoom={selectedMarker ? 12 : hasMarkers ? 14 : 13}
+        >
+          {routeCoordinates.length >= 2 ? (
+            <MapRoute coordinates={routeCoordinates} width={5} opacity={0.9} />
+          ) : null}
 
-              return (
-                <MapMarker
-                  key={marker.id}
-                  longitude={marker.longitude}
-                  latitude={marker.latitude}
-                  onClick={() => setSelectedMarkerId(marker.id)}
-                >
-                  <MarkerContent
-                    className={
-                      isSelected
-                        ? 'rounded-full ring-4 ring-emerald-300/70'
-                        : undefined
-                    }
-                  />
-                  {marker.label ? (
-                    <MarkerTooltip>
-                      {isSelected
-                        ? `${marker.label} · selected`
-                        : `${marker.label} · click to route`}
-                    </MarkerTooltip>
-                  ) : null}
-                </MapMarker>
-              );
-            })}
-            <MapControls />
-          </Map>
-          {!hasMarkers ? (
-            <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
-              No SQL-backed incident markers found.
-            </div>
-          ) : (
-            <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
-              Click here to check the routing for the nearest MDDRRMO
-            </div>
-          )}
-        </Card>
+          {markers.map((marker) => {
+            const isSelected = marker.id === selectedMarker?.id;
 
-        <Card className="relative h-[340px] overflow-hidden p-0 lg:h-[520px]">
-          <Map center={routeMapCenter} zoom={selectedMarker ? 12 : 14}>
-            {routeCoordinates.length >= 2 ? (
-              <MapRoute
-                coordinates={routeCoordinates}
-                width={5}
-                opacity={0.9}
-              />
-            ) : null}
+            return (
+              <MapMarker
+                key={marker.id}
+                longitude={marker.longitude}
+                latitude={marker.latitude}
+                onClick={() => setSelectedMarkerId(marker.id)}
+              >
+                <MarkerContent
+                  className={
+                    isSelected
+                      ? 'rounded-full ring-4 ring-emerald-300/70'
+                      : 'opacity-80'
+                  }
+                />
+                {marker.label ? (
+                  <MarkerTooltip>
+                    {isSelected
+                      ? `${marker.label} · selected`
+                      : `${marker.label} · click to route`}
+                  </MarkerTooltip>
+                ) : null}
+              </MapMarker>
+            );
+          })}
 
-            {markers.map((marker) => {
-              const isSelected = marker.id === selectedMarker?.id;
+          <MapMarker
+            longitude={activeDestination.longitude}
+            latitude={activeDestination.latitude}
+          >
+            <MarkerContent className="rounded-full ring-4 ring-emerald-300/70">
+              {locationStatus === 'granted' ? (
+                <div className="relative h-4 w-4 rounded-full border-2 border-white bg-emerald-500 shadow-lg" />
+              ) : (
+                <div className="relative h-4 w-4 rounded-full border-2 border-white bg-blue-500 shadow-lg" />
+              )}
+            </MarkerContent>
+            <MarkerTooltip>{activeDestination.label}</MarkerTooltip>
+          </MapMarker>
 
-              return (
-                <MapMarker
-                  key={`route-${marker.id}`}
-                  longitude={marker.longitude}
-                  latitude={marker.latitude}
-                  onClick={() => setSelectedMarkerId(marker.id)}
-                >
-                  <MarkerContent
-                    className={
-                      isSelected
-                        ? 'rounded-full ring-4 ring-emerald-300/70'
-                        : 'opacity-80'
-                    }
-                  />
-                  {marker.label ? (
-                    <MarkerTooltip>
-                      {isSelected
-                        ? `${marker.label} · selected`
-                        : `${marker.label} · click to route`}
-                    </MarkerTooltip>
-                  ) : null}
-                </MapMarker>
-              );
-            })}
-
-            <MapMarker
-              longitude={destination.longitude}
-              latitude={destination.latitude}
-            >
-              <MarkerContent className="rounded-full ring-4 ring-sky-300/70" />
-              <MarkerTooltip>{destination.label}</MarkerTooltip>
-            </MapMarker>
-
-            <MapControls />
-          </Map>
-          {!selectedMarker ? (
-            <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
-              Route preview is waiting for one real incident marker from SQL.
-            </div>
-          ) : routeStatus === 'loading' ? (
-            <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
-              Loading road-based route to {destination.label}.
-            </div>
-          ) : routeStatus === 'error' ? (
-            <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
-              {routeErrorMessage ??
-                'Could not load a road route for this marker.'}
-            </div>
-          ) : (
-            <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
-              Routing from {selectedMarker.label ?? 'Selected incident'} to{' '}
-              {destination.label}.
-            </div>
-          )}
-        </Card>
-      </div>
+          <MapControls />
+        </Map>
+        {!hasMarkers ? (
+          <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+            No SQL-backed incident markers found.
+          </div>
+        ) : locationStatus === 'requesting' ? (
+          <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+            {locationMessage}
+          </div>
+        ) : !selectedMarker ? (
+          <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+            {locationMessage ??
+              `Click an incident marker to preview the route to ${activeDestination.label}.`}
+          </div>
+        ) : routeStatus === 'loading' ? (
+          <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+            Loading road-based route to {activeDestination.label}.
+          </div>
+        ) : routeStatus === 'error' ? (
+          <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+            {routeErrorMessage ??
+              'Could not load a road route for this marker.'}
+          </div>
+        ) : (
+          <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+            Routing from {selectedMarker.label ?? 'Selected incident'} to{' '}
+            {activeDestination.label}.
+          </div>
+        )}
+      </Card>
 
       {selectedMarker ? (
         <Card className="gap-3 px-6 py-5">
