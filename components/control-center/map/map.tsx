@@ -1993,10 +1993,6 @@ function MapPolygonDraw({
           </ControlButton>
         </ControlGroup>
       )}
-
-      <div className="bg-background/90 text-muted-foreground rounded-md border px-2 py-1 text-[11px] shadow-sm backdrop-blur-xs">
-        Click to add points. Double-click to finish polygon.
-      </div>
     </div>
   );
 }
