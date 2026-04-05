@@ -65,6 +65,9 @@ importers:
       chat:
         specifier: ^4.23.0
         version: 4.23.0
+      chat-adapter-messenger:
+        specifier: ^1.0.0
+        version: 1.0.0(chat@4.23.0)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2024,6 +2027,11 @@ packages:
 
   character-entities@2.0.2:
     resolution: {integrity: sha512-shx7oQ0Awen/BRIdkjkvz54PnEEI/EjwXDSIZp86/KKdbafHh1Df/RYGBhn4hbe2+uKC9FnT5UCEdyPz3ai9hQ==}
+
+  chat-adapter-messenger@1.0.0:
+    resolution: {integrity: sha512-O/kIpLl49vBHbUCSR9c+mmLu3VN/EIJzEx/5U9NLpazlwJ5MCNDUEZfXI5i9CJ1+xedW2dhzFbFeTsttnkbWBg==}
+    peerDependencies:
+      chat: ^4.23.0
 
   chat@4.23.0:
     resolution: {integrity: sha512-Gmw8yyDrrH9Vxs+TfxF7FoTENrCzJV4T0FiAh7APGcQPhMMYAhrpq66PKj8azhkUSEyaen8ujbneogoJWiY8vg==}
@@ -5887,6 +5895,13 @@ snapshots:
       supports-color: 7.2.0
 
   character-entities@2.0.2: {}
+
+  chat-adapter-messenger@1.0.0(chat@4.23.0):
+    dependencies:
+      '@chat-adapter/shared': 4.23.0
+      chat: 4.23.0
+    transitivePeerDependencies:
+      - supports-color
 
   chat@4.23.0:
     dependencies:
