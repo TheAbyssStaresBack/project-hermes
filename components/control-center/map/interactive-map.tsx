@@ -8,6 +8,7 @@ import {
   MapMarker,
   MapRoute,
   MarkerContent,
+  MarkerPopup,
   MarkerTooltip,
 } from '@/components/control-center/map/map';
 import { Card } from '@/components/ui/card';
@@ -35,10 +36,72 @@ type InteractiveMapProps = {
   destination: DestinationMarker;
 };
 
-export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
-  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(
-    markers[0]?.id ?? null
+function formatIncidentTime(incidentTime?: string | null) {
+  return incidentTime
+    ? new Intl.DateTimeFormat('en-PH', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Asia/Manila',
+      }).format(new Date(incidentTime))
+    : 'No incident time';
+}
+
+function IncidentMarkerCard({ marker }: { marker: IncidentMarker }) {
+  return (
+    <div className="w-[280px] overflow-hidden rounded-2xl border border-border/70 bg-card text-card-foreground shadow-2xl">
+      <div className="space-y-4 p-4">
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium tracking-[0.22em] text-muted-foreground uppercase">
+            Incident
+          </p>
+          <h3 className="text-base font-semibold leading-tight">
+            {marker.label ?? 'Selected incident'}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {formatIncidentTime(marker.incidentTime)}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-border/60 bg-muted/35 px-3 py-2">
+            <div className="text-[10px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
+              Severity
+            </div>
+            <div className="mt-1 text-sm font-semibold capitalize">
+              {marker.severity ?? 'Unknown'}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-muted/35 px-3 py-2">
+            <div className="text-[10px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
+              Status
+            </div>
+            <div className="mt-1 text-sm font-semibold capitalize">
+              {marker.status?.replace('_', ' ') ?? 'Unknown'}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div>
+            <div className="text-[10px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
+              Description
+            </div>
+            <p className="mt-1 text-sm leading-6 text-foreground">
+              {marker.description ?? 'No incident description provided.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
+}
+
+export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
+  const [activeRouteMarkerId, setActiveRouteMarkerId] = useState<string | null>(
+    null
+  );
+  const [openMarkerId, setOpenMarkerId] = useState<string | null>(null);
   const [activeDestination, setActiveDestination] =
     useState<DestinationMarker>(destination);
   const [locationStatus, setLocationStatus] = useState<
@@ -56,26 +119,39 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
   );
 
   const selectedMarker =
-    markers.find((marker) => marker.id === selectedMarkerId) ??
-    markers[0] ??
-    null;
+    markers.find((marker) => marker.id === activeRouteMarkerId) ?? null;
   const hasMarkers = markers.length > 0;
+  const resolvedDestination =
+    locationStatus === 'granted' || locationStatus === 'fallback'
+      ? activeDestination
+      : null;
 
-  const mapCenter: [number, number] = selectedMarker
-    ? [
-        (selectedMarker.longitude + activeDestination.longitude) / 2,
-        (selectedMarker.latitude + activeDestination.latitude) / 2,
-      ]
-    : hasMarkers
-      ? [markers[0].longitude, markers[0].latitude]
-      : [activeDestination.longitude, activeDestination.latitude];
+  const mapCenter: [number, number] =
+    selectedMarker && resolvedDestination
+      ? [
+          (selectedMarker.longitude + resolvedDestination.longitude) / 2,
+          (selectedMarker.latitude + resolvedDestination.latitude) / 2,
+        ]
+      : selectedMarker
+        ? [selectedMarker.longitude, selectedMarker.latitude]
+        : hasMarkers
+          ? [markers[0].longitude, markers[0].latitude]
+          : resolvedDestination
+            ? [resolvedDestination.longitude, resolvedDestination.latitude]
+            : [destination.longitude, destination.latitude];
 
-  const selectedIncidentTime = selectedMarker?.incidentTime
-    ? new Date(selectedMarker.incidentTime).toLocaleString('en-PH', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      })
-    : null;
+  useEffect(() => {
+    if (!activeRouteMarkerId && !openMarkerId) return;
+
+    const markerExists = markers.some(
+      (marker) =>
+        marker.id === activeRouteMarkerId || marker.id === openMarkerId
+    );
+    if (!markerExists) {
+      setActiveRouteMarkerId(null);
+      setOpenMarkerId(null);
+    }
+  }, [activeRouteMarkerId, markers, openMarkerId]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('geolocation' in navigator)) {
@@ -115,7 +191,11 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
   }, [destination]);
 
   useEffect(() => {
-    if (locationStatus === 'idle' || locationStatus === 'requesting') {
+    if (
+      locationStatus === 'idle' ||
+      locationStatus === 'requesting' ||
+      !resolvedDestination
+    ) {
       setRouteCoordinates([]);
       setRouteStatus('idle');
       setRouteErrorMessage(null);
@@ -136,11 +216,20 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
       setRouteErrorMessage(null);
 
       try {
+        const routeOrigin = selectedMarker;
+        const routeDestination = resolvedDestination;
+
+        if (!routeOrigin || !routeDestination) {
+          setRouteCoordinates([]);
+          setRouteStatus('idle');
+          return;
+        }
+
         const params = new URLSearchParams({
-          startLng: String(selectedMarker.longitude),
-          startLat: String(selectedMarker.latitude),
-          endLng: String(activeDestination.longitude),
-          endLat: String(activeDestination.latitude),
+          startLng: String(routeOrigin.longitude),
+          startLat: String(routeOrigin.latitude),
+          endLng: String(routeDestination.longitude),
+          endLat: String(routeDestination.latitude),
         });
 
         const response = await fetch(
@@ -187,19 +276,16 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
     return () => {
       controller.abort();
     };
-  }, [
-    activeDestination.latitude,
-    activeDestination.longitude,
-    locationStatus,
-    selectedMarker,
-  ]);
+  }, [locationStatus, resolvedDestination, selectedMarker]);
 
   return (
-    <div className="space-y-4">
-      <Card className="relative h-[380px] overflow-hidden p-0 lg:h-[560px]">
+    <div className="flex h-full flex-1 flex-col">
+      <Card className="relative min-h-[calc(100dvh-var(--header-height))] flex-1 overflow-hidden rounded-none border-0 p-0 shadow-none">
         <Map
           center={mapCenter}
-          zoom={selectedMarker ? 12 : hasMarkers ? 14 : 13}
+          zoom={
+            selectedMarker && resolvedDestination ? 12 : hasMarkers ? 14 : 13
+          }
         >
           {routeCoordinates.length >= 2 ? (
             <MapRoute coordinates={routeCoordinates} width={5} opacity={0.9} />
@@ -207,13 +293,17 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
 
           {markers.map((marker) => {
             const isSelected = marker.id === selectedMarker?.id;
+            const isOpen = marker.id === openMarkerId;
 
             return (
               <MapMarker
                 key={marker.id}
                 longitude={marker.longitude}
                 latitude={marker.latitude}
-                onClick={() => setSelectedMarkerId(marker.id)}
+                onClick={() => {
+                  setActiveRouteMarkerId(marker.id);
+                  setOpenMarkerId(marker.id);
+                }}
               >
                 <MarkerContent
                   className={
@@ -222,30 +312,46 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
                       : 'opacity-80'
                   }
                 />
-                {marker.label ? (
-                  <MarkerTooltip>
-                    {isSelected
-                      ? `${marker.label} · selected`
-                      : `${marker.label} · click to route`}
+                {!isOpen ? (
+                  <MarkerTooltip
+                    className="border-0 bg-transparent p-0 shadow-none"
+                    closeOnMove={true}
+                  >
+                    <IncidentMarkerCard marker={marker} />
                   </MarkerTooltip>
                 ) : null}
+                <MarkerPopup
+                  open={isOpen}
+                  onOpenChange={(open) => {
+                    if (!open && openMarkerId === marker.id) {
+                      setOpenMarkerId(null);
+                    }
+                  }}
+                  closeButton
+                  closeOnMove={false}
+                  className="border-0 bg-transparent p-0 shadow-none"
+                >
+                  <IncidentMarkerCard marker={marker} />
+                </MarkerPopup>
               </MapMarker>
             );
           })}
 
-          <MapMarker
-            longitude={activeDestination.longitude}
-            latitude={activeDestination.latitude}
-          >
-            <MarkerContent className="rounded-full ring-4 ring-emerald-300/70">
-              {locationStatus === 'granted' ? (
-                <div className="relative h-4 w-4 rounded-full border-2 border-white bg-emerald-500 shadow-lg" />
-              ) : (
-                <div className="relative h-4 w-4 rounded-full border-2 border-white bg-blue-500 shadow-lg" />
-              )}
-            </MarkerContent>
-            <MarkerTooltip>{activeDestination.label}</MarkerTooltip>
-          </MapMarker>
+          {resolvedDestination ? (
+            <MapMarker
+              longitude={resolvedDestination.longitude}
+              latitude={resolvedDestination.latitude}
+            >
+              <MarkerContent className="rounded-full ring-4 ring-emerald-300/70">
+                {locationStatus === 'granted' ? (
+                  <div className="relative h-4 w-4 rounded-full border-2 border-white bg-emerald-500 shadow-lg" />
+                ) : (
+                  <div className="relative h-4 w-4 rounded-full border-2 border-white bg-blue-500 shadow-lg" />
+                )}
+              </MarkerContent>
+              <MarkerTooltip>{resolvedDestination.label}</MarkerTooltip>
+            </MapMarker>
+          ) : null}
 
           <MapControls />
         </Map>
@@ -260,11 +366,12 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
         ) : !selectedMarker ? (
           <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
             {locationMessage ??
-              `Click an incident marker to preview the route to ${activeDestination.label}.`}
+              `Click an incident marker to preview the route to ${resolvedDestination?.label ?? 'the destination'}.`}
           </div>
         ) : routeStatus === 'loading' ? (
           <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
-            Loading road-based route to {activeDestination.label}.
+            Loading road-based route to{' '}
+            {resolvedDestination?.label ?? 'the destination'}.
           </div>
         ) : routeStatus === 'error' ? (
           <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
@@ -274,65 +381,10 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
         ) : (
           <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
             Routing from {selectedMarker.label ?? 'Selected incident'} to{' '}
-            {activeDestination.label}.
+            {resolvedDestination?.label ?? 'the destination'}.
           </div>
         )}
       </Card>
-
-      {selectedMarker ? (
-        <Card className="gap-3 px-6 py-5">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-base font-semibold">
-                {selectedMarker.label ?? 'Selected incident'}
-              </h3>
-              <p className="text-sm text-muted-foreground">INCIDENT RECORDS</p>
-            </div>
-            <div className="text-right text-sm text-muted-foreground">
-              {selectedIncidentTime ?? 'No incident time'}
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Severity
-              </div>
-              <div className="mt-1 font-medium capitalize">
-                {selectedMarker.severity ?? 'Unknown'}
-              </div>
-            </div>
-
-            <div className="rounded-lg border px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Status
-              </div>
-              <div className="mt-1 font-medium capitalize">
-                {selectedMarker.status?.replace('_', ' ') ?? 'Unknown'}
-              </div>
-            </div>
-
-            <div className="rounded-lg border px-4 py-3 md:col-span-2">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Location
-              </div>
-              <div className="mt-1 font-medium">
-                {selectedMarker.label ?? 'No location description'}
-              </div>
-            </div>
-
-            <div className="rounded-lg border px-4 py-3 md:col-span-2 xl:col-span-4">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Description
-              </div>
-              <div className="mt-1 text-sm leading-6 text-foreground">
-                {selectedMarker.description ??
-                  'No incident description provided.'}
-              </div>
-            </div>
-          </div>
-        </Card>
-      ) : null}
     </div>
   );
 }

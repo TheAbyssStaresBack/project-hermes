@@ -1,7 +1,5 @@
-import {
-  IncidentMarker,
-  InteractiveMap,
-} from '@/components/control-center/map/interactive-map';
+import { IncidentMarker } from '@/components/control-center/map/interactive-map';
+import { InteractiveMapShell } from '@/components/control-center/map/interactive-map-shell';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import type { Tables } from '@/types/supabase';
@@ -80,7 +78,7 @@ export default async function Page() {
   });
 
   return (
-    <InteractiveMap
+    <InteractiveMapShell
       markers={dbMarkers}
       destination={MIAGAO_MDRRMO_DESTINATION}
     />
