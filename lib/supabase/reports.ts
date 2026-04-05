@@ -158,3 +158,27 @@ export async function fetchKanbanCategoryContents(
     return null;
   }
 }
+
+export async function updateIncidentEntry(incident: Incident) {
+  try {
+    const error = await supabase
+      .from('incidents')
+      .update({
+        location_description: incident.location,
+        severity: incident.severity,
+        description: incident.description,
+        status: incident.status,
+      })
+      .eq('id', incident.id);
+
+    if (error) {
+      console.error('Error fetching incident:', error);
+      return null;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Database fetch error:', error);
+    return null;
+  }
+}
