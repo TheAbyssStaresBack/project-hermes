@@ -7,8 +7,9 @@ export function cn(...inputs: ClassValue[]) {
 
 export function convertTime(time: string) {
   const date = new Date(time);
-  const formatted = date.toISOString().split('.')[0];
-  return formatted;
+  const noMs = date.toISOString().split('.')[0];
+  const formatted = noMs.split('T');
+  return formatted[0] + ' ' + formatted[1];
 }
 
 export function hexToCoordinates(hexString: string): string | null {
