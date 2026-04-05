@@ -123,7 +123,8 @@ export default function ReportDetails({ incidentID }: ReportDetailsProps) {
 
   return (
     <form className="w-full p-10">
-      <h1 className="text-3xl font-bold">Report Details</h1>
+      <h1 className="text-3xl font-bold my-2">Report Details</h1>
+      <h2 className="text-xl my-2 mb-8">Report ID: {formData.id}</h2>
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="formReportedBy">Reported By</FieldLabel>
