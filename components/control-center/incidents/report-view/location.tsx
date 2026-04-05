@@ -15,66 +15,71 @@ interface MapComponentProps {
 }
 
 interface ParsedCoordinates {
-  lat: number;
-  long: number;
+  lat: number | null;
+  long: number | null;
 }
 
 export function Location({ incidentID }: MapComponentProps) {
-  // Note: need easy way for user to change values
   const defaultLocation: number[] = [10.6499974, 122.2333324];
-  const [incidentLocation, setIncidentLocation] = React.useState<
-    string[] | undefined
-  >(undefined);
   const mapRef = React.useRef<MapRef | null>(null);
   const [parsedCoord, setParsedCoord] = React.useState<ParsedCoordinates>({
-    lat: defaultLocation[0],
-    long: defaultLocation[1],
+    lat: null,
+    long: null,
   });
 
   React.useEffect(() => {
+    if (!incidentID) return; // Skip if no ID
+
     const markIncidentLoc = async () => {
-      const incidents = await fetchIncidentById(incidentID);
-      if (incidents)
-        setIncidentLocation(hexToCoordinates(incidents.location)?.split(' '));
-      if (incidentLocation) {
-        setParsedCoord({
-          lat: parseFloat(incidentLocation[0]),
-          long: parseFloat(incidentLocation[1]),
-        });
+      try {
+        const incidents = await fetchIncidentById(incidentID);
+        if (!incidents?.location) return;
+
+        const coordString = hexToCoordinates(incidents.location);
+        if (!coordString) return;
+
+        const coords = coordString.split(' ');
+        if (coords.length !== 2) return;
+
+        const lat = parseFloat(coords[0]);
+        const long = parseFloat(coords[1]);
+
+        if (!isNaN(lat) && !isNaN(long)) {
+          setParsedCoord({ lat, long });
+        }
+      } catch (error) {
+        console.error('Error fetching incident location:', error);
       }
     };
+
     markIncidentLoc();
   }, [incidentID]);
 
   React.useEffect(() => {
-    const zoomInMarker = () => {
-      if (!mapRef || !mapRef.current) return null;
+    if (!mapRef?.current) return;
 
-      if (!incidentLocation || incidentLocation.length !== 2)
-        mapRef.current.flyTo({
-          center: [defaultLocation[1], defaultLocation[0]],
-          zoom: 10,
-          duration: 1500,
-        });
-      else {
-        mapRef.current.flyTo({
-          center: [parsedCoord.long, parsedCoord.lat],
-          zoom: 15,
-          duration: 1500,
-        });
-      }
-    };
-    zoomInMarker();
-  }, [incidentLocation]);
+    const hasValidCoords =
+      parsedCoord.lat !== null && parsedCoord.long !== null;
+    const center: [number, number] = hasValidCoords
+      ? [parsedCoord.long!, parsedCoord.lat!]
+      : [defaultLocation[1], defaultLocation[0]];
+    const zoom = hasValidCoords ? 15 : 10;
+
+    mapRef.current.flyTo({
+      center,
+      zoom,
+      duration: 1500,
+    });
+  }, [parsedCoord]);
 
   function zoomToMarker() {
     if (
-      !mapRef ||
-      !mapRef.current ||
-      !incidentLocation ||
-      incidentLocation.length !== 2
-    )
-      return null;
+      !mapRef?.current ||
+      parsedCoord.lat === null ||
+      parsedCoord.long === null
+    ) {
+      return;
+    }
 
     mapRef.current.flyTo({
       center: [parsedCoord.long, parsedCoord.lat],
@@ -83,9 +88,9 @@ export function Location({ incidentID }: MapComponentProps) {
     });
   }
 
-  if (incidentLocation) {
-    return (
-      <Map ref={mapRef}>
+  return (
+    <Map ref={mapRef}>
+      {parsedCoord.lat !== null && parsedCoord.long !== null && (
         <MapMarker
           latitude={parsedCoord.lat}
           longitude={parsedCoord.long}
@@ -93,17 +98,9 @@ export function Location({ incidentID }: MapComponentProps) {
         >
           <MarkerContent />
         </MapMarker>
-      </Map>
-    );
-  } else {
-    return (
-      <Map
-        ref={mapRef}
-        center={[parsedCoord.long, parsedCoord.lat]}
-        zoom={10}
-      />
-    );
-  }
+      )}
+    </Map>
+  );
 }
 
 export default Location;
