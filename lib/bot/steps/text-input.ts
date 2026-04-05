@@ -34,6 +34,38 @@ function hasImageAttachment(data: unknown): boolean {
   });
 }
 
+function hasAudioAttachment(data: unknown): boolean {
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+
+  const attachments = (data as { attachments?: unknown }).attachments;
+  if (!Array.isArray(attachments)) {
+    return false;
+  }
+
+  return attachments.some((attachment) => {
+    if (!attachment || typeof attachment !== 'object') {
+      return false;
+    }
+
+    const currentAttachment = attachment as {
+      type?: unknown;
+      mimeType?: unknown;
+    };
+
+    if (currentAttachment.type === 'audio') {
+      return true;
+    }
+
+    return (
+      currentAttachment.type === 'file' &&
+      typeof currentAttachment.mimeType === 'string' &&
+      currentAttachment.mimeType.startsWith('audio/')
+    );
+  });
+}
+
 const renderCardPromise = import('../renderers/card-renderer').then(
   (module) => module.renderCard
 );
@@ -54,9 +86,12 @@ export class TextInputHandler extends BaseStepHandler {
 
     const hasAttachedImage =
       step.allowImageAttachments && hasImageAttachment(data);
+    const hasAttachedAudio =
+      step.allowAudioAttachments && hasAudioAttachment(data);
+    const hasAllowedAttachments = hasAttachedImage || hasAttachedAudio;
 
     if (!text || typeof text !== 'string') {
-      if (hasAttachedImage) {
+      if (hasAllowedAttachments) {
         return { value: '' };
       }
 
@@ -64,7 +99,7 @@ export class TextInputHandler extends BaseStepHandler {
     }
 
     // Validate the value unless this step is accepting image-only input.
-    if (!hasAttachedImage) {
+    if (!hasAllowedAttachments) {
       const validationError = this.validateValue(text, step);
       if (validationError) {
         return { error: validationError };

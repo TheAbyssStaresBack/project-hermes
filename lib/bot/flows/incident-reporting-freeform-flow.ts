@@ -39,10 +39,11 @@ export const incidentReportingFreeformFlow: Flow = {
       id: 'freeform_report',
       type: 'text',
       prompt:
-        'Describe the incident in one message, or send a photo of the incident, or both. Include what happened, where it happened, and how urgent it is.',
+        'Describe the incident in one message, send a voice recording, send a photo of the incident, or combine them. Include what happened, where it happened, and how urgent it is.',
       validations: [required, compose(minLength(15), maxLength(3000))],
       dataKey: 'freeformReportText',
       allowImageAttachments: true,
+      allowAudioAttachments: true,
       onAfterParse: async (value, _data, input) => {
         if (typeof value !== 'string' && typeof value !== 'undefined') {
           throw new Error('Invalid report format. Please try again.');

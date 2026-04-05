@@ -80,6 +80,9 @@ export interface Step {
   /** Allow image attachments to satisfy a text step, enabling multimodal input. */
   allowImageAttachments?: boolean;
 
+  /** Allow audio attachments to satisfy a text step, enabling voice-first input. */
+  allowAudioAttachments?: boolean;
+
   /** Resolve and attach a human-readable location description for location inputs. */
   resolveLocationDescription?: boolean;
 

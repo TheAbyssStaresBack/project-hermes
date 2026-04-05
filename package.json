@@ -22,6 +22,7 @@
     ]
   },
   "dependencies": {
+    "@ai-sdk/deepgram": "^2.0.27",
     "@ai-sdk/google": "^3.0.53",
     "@ai-sdk/react": "^3.0.143",
     "@chat-adapter/state-pg": "^4.23.0",
