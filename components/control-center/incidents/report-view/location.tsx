@@ -57,7 +57,6 @@ export function Location({ incidentID }: MapComponentProps) {
           duration: 1500,
         });
       else {
-        console.log(parsedCoord);
         mapRef.current.flyTo({
           center: [parsedCoord.long, parsedCoord.lat],
           zoom: 15,
