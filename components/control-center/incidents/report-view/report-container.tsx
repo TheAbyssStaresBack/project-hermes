@@ -3,7 +3,7 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import React from 'react';
-import Location from './location';
+import { Location } from './location';
 import ReportDetails from './report-details';
 
 interface ReportContainerProps {
@@ -26,7 +26,7 @@ export const ReportContainer: React.FC<ReportContainerProps> = ({
         </ScrollArea>
       </TabsContent>
       <TabsContent value="location">
-        <Location />
+        <Location incidentID={incident} />
       </TabsContent>
     </Tabs>
   );

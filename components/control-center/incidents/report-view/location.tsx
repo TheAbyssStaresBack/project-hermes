@@ -1,73 +1,91 @@
 'use client';
 
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import React, { useEffect, useRef } from 'react';
+// import L from 'leaflet';
+// import 'leaflet/dist/leaflet.css';
+import {
+  Map,
+  MapMarker,
+  MarkerContent,
+  type MapRef,
+} from '@/components/control-center/map/map';
+import { fetchIncidentById } from '@/lib/supabase/reports';
+import { hexToCoordinates } from '@/lib/utils';
+import * as React from 'react';
 
 interface MapComponentProps {
-  center?: [number, number];
-  zoom?: number;
-  markers?: Array<{
-    lat: number;
-    lng: number;
-    label?: string;
-  }>;
-  onMapReady?: (map: L.Map) => void;
+  incidentID: string | null;
 }
 
 // TODO: set up current location to point to report location
-const Location: React.FC<MapComponentProps> = ({
-  center = [51.505, -0.09],
-  zoom = 13,
-  markers = [],
-  onMapReady,
-}) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<L.Map | null>(null);
+// const Location: React.FC<MapComponentProps> = ({
+//   center = [51.505, -0.09],
+//   zoom = 13,
+//   markers = [],
+//   onMapReady,
+// }, incidentID) => {
+//   return <Map />;
+// };
 
-  useEffect(() => {
-    if (!mapContainer.current) return;
+export function Location({ incidentID }: MapComponentProps) {
+  // Note: need easy way for user to change values
+  const defaultLocation: number[] = [122.2333324, 10.6499974];
+  const [incidentLocation, setIncidentLocation] = React.useState<
+    string[] | undefined
+  >(undefined);
+  const mapRef = React.useRef<MapRef | null>(null);
 
-    // Initialize map
-    mapInstance.current = L.map(mapContainer.current).setView(center, zoom);
-
-    // Add tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19,
-    }).addTo(mapInstance.current);
-
-    // Add markers
-    markers.forEach((marker) => {
-      L.marker([marker.lat, marker.lng])
-        .bindPopup(marker.label || `Lat: ${marker.lat}, Lng: ${marker.lng}`)
-        .addTo(mapInstance.current!);
-    });
-
-    // Callback when map is ready
-    if (onMapReady && mapInstance.current) {
-      onMapReady(mapInstance.current);
-    }
-
-    // Cleanup
-    return () => {
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
-      }
+  React.useEffect(() => {
+    const markIncidentLoc = async () => {
+      const incidents = await fetchIncidentById(incidentID);
+      if (incidents)
+        setIncidentLocation(hexToCoordinates(incidents.location)?.split(' '));
     };
-  }, [center, zoom, markers, onMapReady]);
+    markIncidentLoc();
+  }, [incidentID]);
 
-  return (
-    <div
-      ref={mapContainer}
-      style={{
-        width: '100%',
-        height: '100%',
-        minHeight: '70vh',
-      }}
-    />
-  );
-};
+  React.useEffect(() => {
+    const zoomInMarker = () => {
+      if (!mapRef || !mapRef.current) return null;
+
+      if (!incidentLocation || incidentLocation.length !== 2)
+        mapRef.current.flyTo({
+          center: [defaultLocation[0], defaultLocation[1]],
+          zoom: 10,
+          duration: 1500,
+        });
+      else
+        mapRef.current.flyTo({
+          center: [
+            parseFloat(incidentLocation[1]),
+            parseFloat(incidentLocation[0]),
+          ],
+          zoom: 15,
+          duration: 1500,
+        });
+    };
+    zoomInMarker();
+  }, [incidentLocation]);
+
+  if (incidentLocation) {
+    return (
+      <Map ref={mapRef}>
+        <MapMarker
+          latitude={parseFloat(incidentLocation[0])}
+          longitude={parseFloat(incidentLocation[1])}
+        >
+          <MarkerContent />
+        </MapMarker>
+      </Map>
+    );
+  } else {
+    return (
+      <Map
+        ref={mapRef}
+        center={[defaultLocation[0], defaultLocation[1]]}
+        zoom={10}
+      />
+    );
+  }
+}
 
 export default Location;
