@@ -1197,6 +1197,183 @@ function MapRoute({
   return null;
 }
 
+type HeatmapFeatureProperties = GeoJSON.GeoJsonProperties & {
+  weight?: number;
+};
+
+type MapHeatmapLayerProps<
+  P extends HeatmapFeatureProperties = HeatmapFeatureProperties,
+> = {
+  /** GeoJSON FeatureCollection data or URL to fetch GeoJSON from */
+  data: string | GeoJSON.FeatureCollection<GeoJSON.Point, P>;
+  /** Optional unique identifier for the heatmap layer */
+  id?: string;
+  /** Heatmap color ramp using MapLibre style expressions */
+  colorRamp?: MapLibreGL.ExpressionSpecification;
+  /** Maximum zoom level at which the heatmap is visible */
+  maxVisibleZoom?: number;
+  /** Zoom level to start fading the heatmap */
+  fadeStartZoom?: number;
+  /** Base intensity multiplier */
+  intensity?: number;
+};
+
+function MapHeatmapLayer<
+  P extends HeatmapFeatureProperties = HeatmapFeatureProperties,
+>({
+  data,
+  id: propId,
+  colorRamp = [
+    'interpolate',
+    ['linear'],
+    ['heatmap-density'],
+    0,
+    'rgba(59,130,246,0)',
+    0.2,
+    'rgba(34,197,94,0.35)',
+    0.45,
+    'rgba(250,204,21,0.55)',
+    0.7,
+    'rgba(249,115,22,0.72)',
+    1,
+    'rgba(239,68,68,0.9)',
+  ],
+  maxVisibleZoom = 14,
+  fadeStartZoom = 13,
+  intensity = 1,
+}: MapHeatmapLayerProps<P>) {
+  const { map, isLoaded } = useMap();
+  const autoId = useId();
+  const id = propId ?? autoId;
+  const sourceId = `heatmap-source-${id}`;
+  const layerId = `heatmap-layer-${id}`;
+
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+
+    map.addSource(sourceId, {
+      type: 'geojson',
+      data,
+    });
+
+    map.addLayer({
+      id: layerId,
+      type: 'heatmap',
+      source: sourceId,
+      maxzoom: maxVisibleZoom,
+      paint: {
+        'heatmap-weight': [
+          'interpolate',
+          ['linear'],
+          ['coalesce', ['get', 'weight'], 0],
+          0,
+          0,
+          1,
+          1,
+        ],
+        'heatmap-intensity': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0,
+          intensity * 0.75,
+          fadeStartZoom,
+          intensity * 1.15,
+        ],
+        'heatmap-color': colorRamp,
+        'heatmap-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0,
+          28,
+          fadeStartZoom,
+          42,
+          maxVisibleZoom,
+          54,
+        ],
+        'heatmap-opacity': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0,
+          0.85,
+          fadeStartZoom,
+          0.6,
+          maxVisibleZoom,
+          0,
+        ],
+      },
+    });
+
+    return () => {
+      try {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+      } catch {
+        // ignore cleanup race conditions during style swaps
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, map]);
+
+  useEffect(() => {
+    if (!isLoaded || !map || typeof data === 'string') return;
+
+    const source = map.getSource(sourceId) as
+      | MapLibreGL.GeoJSONSource
+      | undefined;
+    source?.setData(data);
+  }, [data, isLoaded, map, sourceId]);
+
+  useEffect(() => {
+    if (!isLoaded || !map || !map.getLayer(layerId)) return;
+
+    map.setPaintProperty(layerId, 'heatmap-color', colorRamp);
+    map.setPaintProperty(layerId, 'heatmap-intensity', [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      0,
+      intensity * 0.75,
+      fadeStartZoom,
+      intensity * 1.15,
+    ]);
+    map.setPaintProperty(layerId, 'heatmap-radius', [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      0,
+      28,
+      fadeStartZoom,
+      42,
+      maxVisibleZoom,
+      54,
+    ]);
+    map.setPaintProperty(layerId, 'heatmap-opacity', [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      0,
+      0.85,
+      fadeStartZoom,
+      0.6,
+      maxVisibleZoom,
+      0,
+    ]);
+  }, [
+    colorRamp,
+    fadeStartZoom,
+    intensity,
+    isLoaded,
+    layerId,
+    map,
+    maxVisibleZoom,
+  ]);
+
+  return null;
+}
+
 type MapClusterLayerProps<
   P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties,
 > = {
@@ -1511,6 +1688,7 @@ export {
   MapPopup,
   MapControls,
   MapRoute,
+  MapHeatmapLayer,
   MapClusterLayer,
 };
 
