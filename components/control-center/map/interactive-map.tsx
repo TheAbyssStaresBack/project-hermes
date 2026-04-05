@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   Map,
   MapControls,
+  MapHeatmapLayer,
   MapMarker,
   MapRoute,
   MarkerContent,
@@ -97,11 +98,30 @@ function IncidentMarkerCard({ marker }: { marker: IncidentMarker }) {
   );
 }
 
+const MARKER_VISIBILITY_ZOOM = 13;
+const HEATMAP_FADE_END_ZOOM = 14;
+
+function getSeverityWeight(severity?: string | null) {
+  switch (severity) {
+    case 'critical':
+      return 1;
+    case 'high':
+      return 0.75;
+    case 'moderate':
+      return 0.5;
+    case 'low':
+      return 0.25;
+    default:
+      return 0.35;
+  }
+}
+
 export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
   const [activeRouteMarkerId, setActiveRouteMarkerId] = useState<string | null>(
     null
   );
   const [openMarkerId, setOpenMarkerId] = useState<string | null>(null);
+  const [mapZoom, setMapZoom] = useState<number>(13);
   const [activeDestination, setActiveDestination] =
     useState<DestinationMarker>(destination);
   const [locationStatus, setLocationStatus] = useState<
@@ -121,18 +141,37 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
   const selectedMarker =
     markers.find((marker) => marker.id === activeRouteMarkerId) ?? null;
   const hasMarkers = markers.length > 0;
+  const showIncidentMarkers = mapZoom >= MARKER_VISIBILITY_ZOOM;
   const resolvedDestination =
     locationStatus === 'granted' || locationStatus === 'fallback'
       ? activeDestination
       : null;
+  const heatmapData: GeoJSON.FeatureCollection<
+    GeoJSON.Point,
+    { id: string; weight: number; severity?: string | null }
+  > = {
+    type: 'FeatureCollection',
+    features: markers.map((marker) => ({
+      type: 'Feature',
+      properties: {
+        id: marker.id,
+        weight: getSeverityWeight(marker.severity),
+        severity: marker.severity ?? null,
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [marker.longitude, marker.latitude],
+      },
+    })),
+  };
 
   const mapCenter: [number, number] =
-    selectedMarker && resolvedDestination
+    showIncidentMarkers && selectedMarker && resolvedDestination
       ? [
           (selectedMarker.longitude + resolvedDestination.longitude) / 2,
           (selectedMarker.latitude + resolvedDestination.latitude) / 2,
         ]
-      : selectedMarker
+      : showIncidentMarkers && selectedMarker
         ? [selectedMarker.longitude, selectedMarker.latitude]
         : hasMarkers
           ? [markers[0].longitude, markers[0].latitude]
@@ -192,6 +231,7 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
 
   useEffect(() => {
     if (
+      !showIncidentMarkers ||
       locationStatus === 'idle' ||
       locationStatus === 'requesting' ||
       !resolvedDestination
@@ -276,7 +316,12 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
     return () => {
       controller.abort();
     };
-  }, [locationStatus, resolvedDestination, selectedMarker]);
+  }, [
+    locationStatus,
+    resolvedDestination,
+    selectedMarker,
+    showIncidentMarkers,
+  ]);
 
   return (
     <div className="flex h-full flex-1 flex-col">
@@ -284,58 +329,76 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
         <Map
           center={mapCenter}
           zoom={
-            selectedMarker && resolvedDestination ? 12 : hasMarkers ? 14 : 13
+            showIncidentMarkers && selectedMarker && resolvedDestination
+              ? 12
+              : hasMarkers
+                ? 14
+                : 13
           }
+          onViewportChange={(viewport) => {
+            setMapZoom(viewport.zoom);
+          }}
         >
+          {hasMarkers ? (
+            <MapHeatmapLayer
+              id="incident-severity-heatmap"
+              data={heatmapData}
+              fadeStartZoom={MARKER_VISIBILITY_ZOOM}
+              maxVisibleZoom={HEATMAP_FADE_END_ZOOM}
+            />
+          ) : null}
+
           {routeCoordinates.length >= 2 ? (
             <MapRoute coordinates={routeCoordinates} width={5} opacity={0.9} />
           ) : null}
 
-          {markers.map((marker) => {
-            const isSelected = marker.id === selectedMarker?.id;
-            const isOpen = marker.id === openMarkerId;
+          {showIncidentMarkers
+            ? markers.map((marker) => {
+                const isSelected = marker.id === selectedMarker?.id;
+                const isOpen = marker.id === openMarkerId;
 
-            return (
-              <MapMarker
-                key={marker.id}
-                longitude={marker.longitude}
-                latitude={marker.latitude}
-                onClick={() => {
-                  setActiveRouteMarkerId(marker.id);
-                  setOpenMarkerId(marker.id);
-                }}
-              >
-                <MarkerContent
-                  className={
-                    isSelected
-                      ? 'rounded-full ring-4 ring-emerald-300/70'
-                      : 'opacity-80'
-                  }
-                />
-                {!isOpen ? (
-                  <MarkerTooltip
-                    className="border-0 bg-transparent p-0 shadow-none"
-                    closeOnMove={true}
+                return (
+                  <MapMarker
+                    key={marker.id}
+                    longitude={marker.longitude}
+                    latitude={marker.latitude}
+                    onClick={() => {
+                      setActiveRouteMarkerId(marker.id);
+                      setOpenMarkerId(marker.id);
+                    }}
                   >
-                    <IncidentMarkerCard marker={marker} />
-                  </MarkerTooltip>
-                ) : null}
-                <MarkerPopup
-                  open={isOpen}
-                  onOpenChange={(open) => {
-                    if (!open && openMarkerId === marker.id) {
-                      setOpenMarkerId(null);
-                    }
-                  }}
-                  closeButton
-                  closeOnMove={false}
-                  className="border-0 bg-transparent p-0 shadow-none"
-                >
-                  <IncidentMarkerCard marker={marker} />
-                </MarkerPopup>
-              </MapMarker>
-            );
-          })}
+                    <MarkerContent
+                      className={
+                        isSelected
+                          ? 'rounded-full ring-4 ring-emerald-300/70'
+                          : 'opacity-80'
+                      }
+                    />
+                    {!isOpen ? (
+                      <MarkerTooltip
+                        className="border-0 bg-transparent p-0 shadow-none"
+                        closeOnMove={true}
+                      >
+                        <IncidentMarkerCard marker={marker} />
+                      </MarkerTooltip>
+                    ) : null}
+                    <MarkerPopup
+                      open={isOpen}
+                      onOpenChange={(open) => {
+                        if (!open && openMarkerId === marker.id) {
+                          setOpenMarkerId(null);
+                        }
+                      }}
+                      closeButton
+                      closeOnMove={false}
+                      className="border-0 bg-transparent p-0 shadow-none"
+                    >
+                      <IncidentMarkerCard marker={marker} />
+                    </MarkerPopup>
+                  </MapMarker>
+                );
+              })
+            : null}
 
           {resolvedDestination ? (
             <MapMarker
@@ -362,6 +425,10 @@ export function InteractiveMap({ markers, destination }: InteractiveMapProps) {
         ) : locationStatus === 'requesting' ? (
           <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
             {locationMessage}
+          </div>
+        ) : !showIncidentMarkers ? (
+          <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+            HeatMap
           </div>
         ) : !selectedMarker ? (
           <div className="pointer-events-none absolute inset-x-6 top-6 z-10 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
