@@ -1,14 +1,15 @@
 import { AuthButton } from '@/components/auth-button';
 import { Suspense } from 'react';
-import { StepOneIllustration } from '../StepOne';
-import { StepThreeIllustration } from '../StepThree';
-import { StepTwoIllustration } from '../StepTwo';
 import { ChallengesSection } from './components/ChallengeSection';
+import { FaqSection } from './components/FaqSection';
 import { FeatureSection } from './components/FeatureSection';
 import { NewHeroSection as HeroSection } from './components/HeroSection';
+import { HowItWorks } from './components/HowItWorks';
 import { AboutSection } from './components/IntroducingHermes';
 import { Navbar } from './components/NavBar';
 import { StatSection } from './components/StatSection';
+import { TeamSection } from './components/TeamSection';
+import { TestimonialsSection } from './components/Testimonials';
 
 export default function LandingPage() {
   return (
@@ -31,9 +32,10 @@ export default function LandingPage() {
         <ChallengesSection />
         <AboutSection />
         <FeatureSection />
-        <StepOneIllustration />
-        <StepTwoIllustration />
-        <StepThreeIllustration />
+        <HowItWorks />
+        <TeamSection />
+        <TestimonialsSection />
+        <FaqSection />
       </div>
     </main>
   );
