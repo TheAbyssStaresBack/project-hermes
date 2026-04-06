@@ -1,6 +1,11 @@
 import { Constants, type Enums } from '@/types/supabase';
+import { deepgram } from '@ai-sdk/deepgram';
 import { google } from '@ai-sdk/google';
-import { generateText, Output } from 'ai';
+import {
+  experimental_transcribe as transcribe,
+  generateText,
+  Output,
+} from 'ai';
 import type { Attachment, Message } from 'chat';
 import { z } from 'zod';
 
@@ -25,7 +30,7 @@ function isMessageLike(
   );
 }
 
-async function toImageData(
+async function toAttachmentData(
   attachment: Attachment
 ): Promise<Uint8Array | Buffer | string | URL | undefined> {
   if (
@@ -57,6 +62,32 @@ function isImageAttachment(attachment: Attachment): boolean {
       typeof attachment.mimeType === 'string' &&
       attachment.mimeType.startsWith('image/'))
   );
+}
+
+function isAudioAttachment(attachment: Attachment): boolean {
+  return (
+    attachment.type === 'audio' ||
+    ((attachment.type === 'file' || attachment.type === 'video') &&
+      typeof attachment.mimeType === 'string' &&
+      attachment.mimeType.startsWith('audio/'))
+  );
+}
+
+async function transcribeAudioAttachment(
+  attachment: Attachment
+): Promise<string | undefined> {
+  const audio = await toAttachmentData(attachment);
+  if (!audio) {
+    return undefined;
+  }
+
+  const result = await transcribe({
+    model: deepgram.transcription('nova-3'),
+    audio,
+  });
+
+  const transcript = result.text.trim();
+  return transcript.length > 0 ? transcript : undefined;
 }
 
 export async function parseFreeformIncidentReport({
@@ -104,10 +135,31 @@ export async function parseFreeformIncidentReport({
         ? input.text.trim()
         : '';
 
+  const audioAttachmentList =
+    isMessageLike(input) && Array.isArray(input.attachments)
+      ? input.attachments.filter(isAudioAttachment)
+      : [];
+
   const attachmentList =
     isMessageLike(input) && Array.isArray(input.attachments)
       ? input.attachments.filter(isImageAttachment)
       : [];
+
+  const transcriptionSegments: string[] = [];
+  for (const attachment of audioAttachmentList) {
+    try {
+      const transcript = await transcribeAudioAttachment(attachment);
+      if (!transcript) {
+        continue;
+      }
+
+      transcriptionSegments.push(transcript);
+    } catch (error) {
+      console.error('Failed to transcribe incident audio attachment:', error);
+    }
+  }
+
+  const transcribedText = transcriptionSegments.join('\n').trim();
 
   const userContent: Array<
     | { type: 'text'; text: string }
@@ -125,8 +177,15 @@ export async function parseFreeformIncidentReport({
     });
   }
 
+  if (transcribedText) {
+    userContent.push({
+      type: 'text',
+      text: `Transcribed voice report:\n${transcribedText}`,
+    });
+  }
+
   for (const attachment of attachmentList) {
-    const image = await toImageData(attachment);
+    const image = await toAttachmentData(attachment);
     if (!image) {
       continue;
     }
@@ -139,7 +198,9 @@ export async function parseFreeformIncidentReport({
   }
 
   if (userContent.length === 0) {
-    throw new Error('Please provide a text description or an incident image.');
+    throw new Error(
+      'Please provide a text description, an incident image, or a voice recording.'
+    );
   }
 
   const result = await generateText({
