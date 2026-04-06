@@ -8,40 +8,69 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { IconTrendingDown, IconTrendingUp } from '@tabler/icons-react';
+import type { DashboardPayload } from '@/lib/control-center-dashboard';
 
-export function SectionCards() {
+function formatMinutes(value: number | null) {
+  if (value === null) return 'N/A';
+  return `${value} min`;
+}
+
+type SectionCardsProps = {
+  kpis: DashboardPayload['kpis'];
+};
+
+export function SectionCards({ kpis }: SectionCardsProps) {
   const cardsData = [
     {
-      description: 'Average Response Time',
-      title: '12 min',
-      badge: { icon: IconTrendingDown, text: '-15%' }, // Lower is better
-      footerMain: 'Faster than last period',
-      footerIcon: IconTrendingDown,
-      footerSub: 'Goal: under 15 minutes',
-    },
-    {
-      description: 'Structured Reports',
-      title: '87%',
-      badge: { icon: IconTrendingUp, text: '+8%' }, // Higher is better
-      footerMain: 'Successfully auto-structured',
+      description: 'Average response time',
+      title: formatMinutes(kpis.avgResponseMinutes),
+      badge: {
+        icon:
+          kpis.avgResponseMinutes !== null && kpis.avgResponseMinutes <= 15
+            ? IconTrendingDown
+            : IconTrendingUp,
+        text:
+          kpis.avgResponseMinutes !== null && kpis.avgResponseMinutes <= 15
+            ? 'On target'
+            : 'Review',
+      },
+      footerMain: `${kpis.newIncidents24h} new incidents in the last 24h`,
       footerIcon: IconTrendingUp,
-      footerSub: 'NLP engine accuracy improving',
+      footerSub: 'Target response time is below 15 minutes.',
     },
     {
-      description: 'Active Incidents',
-      title: '24',
-      badge: { icon: IconTrendingDown, text: '-10%' }, // Lower number of active incidents
-      footerMain: 'Down from last week',
-      footerIcon: IconTrendingDown,
-      footerSub: 'Monitoring ongoing responses',
-    },
-    {
-      description: 'Resident Engagement',
-      title: '1,452 messages',
-      badge: { icon: IconTrendingUp, text: '+20%' },
-      footerMain: 'More reports and inquiries',
+      description: 'Open high-severity incidents',
+      title: kpis.openHighSeverityCount.toLocaleString(),
+      badge: {
+        icon:
+          kpis.openHighSeverityCount > 0 ? IconTrendingUp : IconTrendingDown,
+        text: kpis.openHighSeverityCount > 0 ? 'Needs attention' : 'Stable',
+      },
+      footerMain: `${kpis.activeIncidents.toLocaleString()} total active incidents`,
       footerIcon: IconTrendingUp,
-      footerSub: 'Across Telegram & Messenger',
+      footerSub: 'Counts include high and critical incidents only.',
+    },
+    {
+      description: 'Active responders',
+      title: kpis.activeResponders.toLocaleString(),
+      badge: { icon: IconTrendingUp, text: 'Live staffing' },
+      footerMain:
+        kpis.pendingInvites !== null
+          ? `${kpis.pendingInvites.toLocaleString()} pending staff invites`
+          : 'Invite queue visible to admins only',
+      footerIcon: IconTrendingUp,
+      footerSub: 'Available responder count from staff directory data.',
+    },
+    {
+      description: 'New incidents (24h)',
+      title: kpis.newIncidents24h.toLocaleString(),
+      badge: {
+        icon: kpis.newIncidents24h > 0 ? IconTrendingUp : IconTrendingDown,
+        text: kpis.newIncidents24h > 0 ? 'Intake active' : 'Quiet window',
+      },
+      footerMain: `${kpis.activeIncidents.toLocaleString()} incidents currently in queue`,
+      footerIcon: IconTrendingUp,
+      footerSub: 'Includes new, validated, and in-progress statuses.',
     },
   ];
 
@@ -55,14 +84,7 @@ export function SectionCards() {
               {card.title}
             </CardTitle>
             <CardAction>
-              <Badge
-                variant="outline"
-                className={
-                  card.badge.icon === IconTrendingUp
-                    ? 'text-green-400 border-green-400'
-                    : 'text-red-400 border-red-400'
-                }
-              >
+              <Badge variant="outline">
                 <card.badge.icon />
                 {card.badge.text}
               </Badge>
