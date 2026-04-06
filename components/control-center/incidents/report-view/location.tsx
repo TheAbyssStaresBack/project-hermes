@@ -12,6 +12,7 @@ import * as React from 'react';
 
 interface MapComponentProps {
   incidentID: string | null;
+  isActive?: boolean;
 }
 
 interface ParsedCoordinates {
@@ -22,7 +23,7 @@ interface ParsedCoordinates {
 // Moved outside the component to ensure a stable reference and fix ESLint warning
 const DEFAULT_LOCATION = [10.6499974, 122.2333324];
 
-export function Location({ incidentID }: MapComponentProps) {
+export function Location({ incidentID, isActive = true }: MapComponentProps) {
   const mapRef = React.useRef<MapRef | null>(null);
   const [parsedCoord, setParsedCoord] = React.useState<ParsedCoordinates>({
     lat: null,
@@ -78,6 +79,18 @@ export function Location({ incidentID }: MapComponentProps) {
       duration: 1500,
     });
   }, [parsedCoord]); // defaultLocation removed from here as it is now static
+
+  React.useEffect(() => {
+    if (!isActive || !mapRef.current) return;
+
+    const animationFrameId = requestAnimationFrame(() => {
+      mapRef.current?.resize();
+    });
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [isActive]);
 
   function zoomToMarker() {
     if (
