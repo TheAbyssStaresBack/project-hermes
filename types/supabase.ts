@@ -349,6 +349,51 @@ export type Database = {
       };
     };
     Views: {
+      incidents_with_details: {
+        Row: {
+          created_at: string | null;
+          description: string | null;
+          id: string | null;
+          incident_time: string | null;
+          incident_type_id: string | null;
+          incident_type_name: string | null;
+          latitude: number | null;
+          location_description: string | null;
+          longitude: number | null;
+          reported_by: string | null;
+          reporter_name: string | null;
+          reporter_platform:
+            | Database['public']['Enums']['resident_platform']
+            | null;
+          reporter_thread_id: string | null;
+          severity: Database['public']['Enums']['incident_severity'] | null;
+          status: Database['public']['Enums']['incident_status'] | null;
+          updated_at: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'incidents_incident_type_id_fkey';
+            columns: ['incident_type_id'];
+            isOneToOne: false;
+            referencedRelation: 'incident_types';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'incidents_reported_by_fkey';
+            columns: ['reported_by'];
+            isOneToOne: false;
+            referencedRelation: 'residents';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'incidents_reported_by_fkey';
+            columns: ['reported_by'];
+            isOneToOne: false;
+            referencedRelation: 'residents_with_coords';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       residents_with_coords: {
         Row: {
           created_at: string | null;
