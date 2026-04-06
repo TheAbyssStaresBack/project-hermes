@@ -33,21 +33,28 @@ export function IncidentList({ onIncidentSelect }: IncidentListProps) {
   React.useEffect(() => {
     const loadIncidents = async () => {
       setLoading(true);
-      const data = await getReportData();
-      if (data) {
-        setIncidents(data);
-        if (isFirstLoadRef.current) {
-          const firstIncidentId = data[0].id;
-          setSelectedIncident(firstIncidentId);
-          onIncidentSelect?.(firstIncidentId);
-          isFirstLoadRef.current = false;
+      try {
+        const data = await getReportData();
+        if (data && data.length > 0) {
+          setIncidents(data);
+
+          if (isFirstLoadRef.current) {
+            const firstIncidentId = data[0].id;
+            setSelectedIncident(firstIncidentId);
+            onIncidentSelect?.(firstIncidentId);
+            isFirstLoadRef.current = false;
+          }
         }
+      } catch (error) {
+        console.error('Failed to load incidents:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     loadIncidents();
-  }, []);
+    // All external variables used inside must be in the dependency array
+  }, [onIncidentSelect, setIncidents, setSelectedIncident, setLoading]);
 
   const handleIncidentClick = (id: string) => {
     setSelectedIncident(id);
