@@ -21,11 +21,11 @@ export const columns: ColumnDef<Incident>[] = [
     },
   },
   {
-    accessorKey: 'reported_by',
+    accessorKey: 'reporter_name',
     header: 'Reported By',
   },
   {
-    accessorKey: 'incident_type_id',
+    accessorKey: 'incident_name',
     header: ({ column }) => {
       return (
         <Button
