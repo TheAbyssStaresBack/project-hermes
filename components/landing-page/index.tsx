@@ -7,6 +7,7 @@ import { HowItWorks } from './components/HowItWorks';
 import { AboutSection } from './components/IntroducingHermes';
 import { Navbar } from './components/NavBar';
 import { StatSection } from './components/StatSection';
+import { TeamSection } from './components/TeamSection';
 
 export default function LandingPage() {
   return (
@@ -25,6 +26,7 @@ export default function LandingPage() {
         <AboutSection />
         <FeatureSection />
         <HowItWorks />
+        <TeamSection />
       </div>
     </main>
   );
