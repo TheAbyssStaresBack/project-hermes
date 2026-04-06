@@ -1,6 +1,7 @@
 import { AuthButton } from '@/components/auth-button';
 import { Suspense } from 'react';
 import { ChallengesSection } from './components/ChallengeSection';
+import { CTASection } from './components/CtaSection';
 import { FaqSection } from './components/FaqSection';
 import { FeatureSection } from './components/FeatureSection';
 import { NewHeroSection as HeroSection } from './components/HeroSection';
@@ -31,6 +32,7 @@ export default function LandingPage() {
         <TeamSection />
         <TestimonialsSection />
         <FaqSection />
+        <CTASection />
       </div>
     </main>
   );
