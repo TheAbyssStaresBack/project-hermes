@@ -10,6 +10,7 @@ import {
   buildInviteDelivery,
   buildInviteExpiresAt,
   deriveReissueExpiresAt,
+  describeActionError,
   emailBelongsToExistingUser,
   INITIAL_AUTH_ACTION_STATE,
   inviteRoleAllowed,
@@ -85,7 +86,12 @@ export async function createAccountInviteAction(
       });
 
     if (insertError) {
-      if (insertError.message.includes('account_invites_active_email_idx')) {
+      const insertErrorMessage = describeActionError(
+        insertError,
+        'Unable to create invite.'
+      );
+
+      if (insertErrorMessage.includes('account_invites_active_email_idx')) {
         return asErrorState(
           'There is already a pending invite for that email address.'
         );
@@ -101,7 +107,7 @@ export async function createAccountInviteAction(
     );
   }
 
-  revalidatePath('/admin/invites');
+  revalidatePath('/control-center/admin-panel');
 
   return {
     status: 'success',
@@ -208,7 +214,7 @@ export async function reissueAccountInviteAction(
       throw insertError;
     }
 
-    revalidatePath('/admin/invites');
+    revalidatePath('/control-center/admin-panel');
 
     return {
       status: 'success',
@@ -298,7 +304,7 @@ export async function acceptAccountInviteAction(
       await releaseInviteClaim(tokenHash);
 
       return asErrorState(
-        createUserError?.message ?? 'Unable to create your account.'
+        describeActionError(createUserError, 'Unable to create your account.')
       );
     }
 
@@ -318,7 +324,7 @@ export async function acceptAccountInviteAction(
       throw new Error('Invite completion failed.');
     }
 
-    revalidatePath('/admin/invites');
+    revalidatePath('/control-center/admin-panel');
     revalidatePath('/auth/login');
   } catch (error) {
     unstable_rethrow(error);

@@ -137,7 +137,41 @@ export type Database = {
             referencedRelation: 'residents';
             referencedColumns: ['id'];
           },
+          {
+            foreignKeyName: 'advisory_recipients_resident_id_fkey';
+            columns: ['resident_id'];
+            isOneToOne: false;
+            referencedRelation: 'residents_with_coords';
+            referencedColumns: ['id'];
+          },
         ];
+      };
+      advisory_templates: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          message: string;
+          name: string;
+          title: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          message: string;
+          name: string;
+          title: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          message?: string;
+          name?: string;
+          title?: string;
+        };
+        Relationships: [];
       };
       incident_types: {
         Row: {
@@ -213,6 +247,13 @@ export type Database = {
             columns: ['reported_by'];
             isOneToOne: false;
             referencedRelation: 'residents';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'incidents_reported_by_fkey';
+            columns: ['reported_by'];
+            isOneToOne: false;
+            referencedRelation: 'residents_with_coords';
             referencedColumns: ['id'];
           },
         ];
@@ -308,7 +349,42 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      residents_with_coords: {
+        Row: {
+          created_at: string | null;
+          id: string | null;
+          language: Database['public']['Enums']['resident_language'] | null;
+          latitude: number | null;
+          longitude: number | null;
+          name: string | null;
+          platform: Database['public']['Enums']['resident_platform'] | null;
+          platform_user_id: string | null;
+          thread_id: string | null;
+        };
+        Insert: {
+          created_at?: string | null;
+          id?: string | null;
+          language?: Database['public']['Enums']['resident_language'] | null;
+          latitude?: never;
+          longitude?: never;
+          name?: string | null;
+          platform?: Database['public']['Enums']['resident_platform'] | null;
+          platform_user_id?: string | null;
+          thread_id?: string | null;
+        };
+        Update: {
+          created_at?: string | null;
+          id?: string | null;
+          language?: Database['public']['Enums']['resident_language'] | null;
+          latitude?: never;
+          longitude?: never;
+          name?: string | null;
+          platform?: Database['public']['Enums']['resident_platform'] | null;
+          platform_user_id?: string | null;
+          thread_id?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       bootstrap_registration_open: { Args: never; Returns: boolean };
@@ -358,6 +434,16 @@ export type Database = {
       release_bootstrap_admin_claim: {
         Args: { target_email: string };
         Returns: undefined;
+      };
+      set_staff_role: {
+        Args: {
+          target_role: Database['public']['Enums']['app_role'];
+          target_user_id: string;
+        };
+        Returns: {
+          role: Database['public']['Enums']['app_role'];
+          user_id: string;
+        }[];
       };
     };
     Enums: {

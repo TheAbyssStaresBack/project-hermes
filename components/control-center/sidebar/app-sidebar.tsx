@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAddressBook,
   IconChartBar,
   IconDashboard,
   IconHelp,
@@ -23,11 +24,19 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { User } from '@supabase/supabase-js';
+import type { AuthUser } from '@/lib/auth/types';
 import Logo from '../../brand/logo';
 
-const data = {
-  navMain: [
+export function AppSidebar({
+  viewer,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { viewer: AuthUser }) {
+  const canAccessAdminPanel = viewer.roles.some(
+    (assignment) =>
+      assignment.role === 'admin' || assignment.role === 'super_admin'
+  );
+
+  const navMain = [
     {
       title: 'Dashboard',
       url: '/control-center',
@@ -49,12 +58,22 @@ const data = {
       icon: IconMap,
     },
     {
-      title: 'Team',
-      url: '/control-center/team',
-      icon: IconUsers,
+      title: 'Residents',
+      url: '/control-center/residents',
+      icon: IconAddressBook,
     },
-  ],
-  navSecondary: [
+    ...(canAccessAdminPanel
+      ? [
+          {
+            title: 'Admin Panel',
+            url: '/control-center/admin-panel',
+            icon: IconUsers,
+          },
+        ]
+      : []),
+  ];
+
+  const navSecondary = [
     {
       title: 'Settings',
       url: '/control-center/settings',
@@ -65,13 +84,8 @@ const data = {
       url: '/control-center/help',
       icon: IconHelp,
     },
-  ],
-};
+  ];
 
-export function AppSidebar({
-  user,
-  ...props
-}: React.ComponentProps<typeof Sidebar> & { user: User }) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -90,11 +104,11 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={navMain} />
+        <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} />
+        <NavUser user={viewer} />
       </SidebarFooter>
     </Sidebar>
   );
