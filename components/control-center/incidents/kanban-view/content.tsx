@@ -56,7 +56,7 @@ function KanbanContent({
 
   return (
     <CategoryCard title={title} className={className}>
-      <ScrollArea className="h-full rounded-md flex h-[calc(100vh-275px)]">
+      <ScrollArea className="flex h-[calc(100vh-275px)] rounded-md">
         <div className="p-4">
           {loading ? (
             <p className="text-sm text-gray-500">Loading incidents...</p>
@@ -65,7 +65,7 @@ function KanbanContent({
               <React.Fragment key={incident.id}>
                 <div className="text-sm">
                   <IncidentEntry
-                    id={incident.incident_time}
+                    incident={incident}
                     isSelected={selectedIncident === incident.id}
                     onClick={handleIncidentClick}
                   />

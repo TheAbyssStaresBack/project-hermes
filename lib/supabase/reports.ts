@@ -18,6 +18,54 @@ export interface Incident {
   updated_at: string;
 }
 
+interface IncidentWithDetailsRow {
+  id: string | null;
+  incident_type_id: string | null;
+  incident_type_name: string | null;
+  severity: string | null;
+  status: string | null;
+  incident_time: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  description: string | null;
+  location_description: string | null;
+  longitude: number | null;
+  latitude: number | null;
+  reported_by: string | null;
+  reporter_name: string | null;
+}
+
+function mapDetailsRowToIncident(row: IncidentWithDetailsRow): Incident | null {
+  if (
+    !row.id ||
+    !row.severity ||
+    !row.status ||
+    !row.incident_time ||
+    !row.created_at ||
+    !row.updated_at
+  ) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    reported_by: row.reporter_name || row.reported_by || 'Unknown Reporter',
+    incident_type_id:
+      row.incident_type_name || row.incident_type_id || 'Unknown Type',
+    location:
+      row.latitude !== null && row.longitude !== null
+        ? `${row.latitude}, ${row.longitude}`
+        : '',
+    location_description: row.location_description,
+    severity: row.severity,
+    description: row.description,
+    status: row.status,
+    incident_time: row.incident_time,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
 export async function fetchIncidents(
   sortBy: string = 'incident_time',
   sortOrder: string = 'descending',
@@ -25,21 +73,22 @@ export async function fetchIncidents(
 ): Promise<Incident[] | null> {
   try {
     const { data, error } = await supabase
-      .from('incidents')
+      .from('incidents_with_details')
       .select(
         `id,
         reported_by,
         incident_type_id,
-        location,
+        incident_type_name,
+        reporter_name,
+        latitude,
+        longitude,
         location_description,
         severity,
         description,
         status,
         incident_time,
         created_at,
-        updated_at,
-        residents (name),
-        incident_types (name)`
+        updated_at`
       )
       .neq('status', 'resolved')
       .neq('status', 'dismissed')
@@ -51,21 +100,9 @@ export async function fetchIncidents(
       return null;
     }
 
-    // Transform the data to flatten the relationships
-    const transformedData = data.map((incident) => ({
-      id: incident.id,
-      reported_by: incident.residents?.[0]?.name || incident.reported_by,
-      incident_type_id:
-        incident.incident_types?.[0]?.name || incident.incident_type_id,
-      location: incident.location,
-      location_description: incident.location_description,
-      severity: incident.severity,
-      description: incident.description,
-      status: incident.status,
-      incident_time: incident.incident_time,
-      created_at: incident.created_at,
-      updated_at: incident.updated_at,
-    }));
+    const transformedData = (data as IncidentWithDetailsRow[])
+      .map(mapDetailsRowToIncident)
+      .filter((incident): incident is Incident => incident !== null);
 
     return transformedData as Incident[];
   } catch (error) {
@@ -169,8 +206,23 @@ export async function fetchKanbanCategoryContents(
 ): Promise<Incident[] | null> {
   try {
     const { data, error } = await supabase
-      .from('incidents')
-      .select()
+      .from('incidents_with_details')
+      .select(
+        `id,
+        reported_by,
+        incident_type_id,
+        incident_type_name,
+        reporter_name,
+        latitude,
+        longitude,
+        location_description,
+        severity,
+        description,
+        status,
+        incident_time,
+        created_at,
+        updated_at`
+      )
       .eq('status', category)
       .limit(count);
     if (error) {
@@ -178,7 +230,11 @@ export async function fetchKanbanCategoryContents(
       return null;
     }
 
-    return data as Incident[];
+    const transformedData = (data as IncidentWithDetailsRow[])
+      .map(mapDetailsRowToIncident)
+      .filter((incident): incident is Incident => incident !== null);
+
+    return transformedData as Incident[];
   } catch (error) {
     console.error('Database fetch error:', error);
     return null;

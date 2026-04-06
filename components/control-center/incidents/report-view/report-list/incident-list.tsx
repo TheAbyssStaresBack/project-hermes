@@ -57,7 +57,7 @@ export function IncidentList({ onIncidentSelect, sort }: IncidentListProps) {
 
     loadIncidents();
     // All external variables used inside must be in the dependency array
-  }, [onIncidentSelect, setIncidents, setSelectedIncident]);
+  }, [onIncidentSelect, setIncidents, setSelectedIncident, sort]);
 
   const handleIncidentClick = (id: string) => {
     setSelectedIncident(id);
@@ -70,9 +70,9 @@ export function IncidentList({ onIncidentSelect, sort }: IncidentListProps) {
         {incidents.map((incident) => (
           <React.Fragment key={incident.id}>
             <IncidentEntry
-              id={incident.incident_time}
+              incident={incident}
               isSelected={selectedIncident === incident.id}
-              onClick={() => handleIncidentClick(incident.id)}
+              onClick={handleIncidentClick}
             />
             <Separator className="my-2" />
           </React.Fragment>
