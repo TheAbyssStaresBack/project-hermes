@@ -35,7 +35,7 @@ export function IncidentTabs() {
       </TabsList>
       <TabsContent value="reports" className="flex flex-row w-full gap-4">
         <IncidentCard onIncidentSelect={handleOnIncidentClick} />
-        <ChatBox />
+        <ChatBox incidentId={selectedIncidentID} />
         <ReportContainer incident={selectedIncidentID} />
       </TabsContent>
       <TabsContent value="kanban" className="flex flex-row w-full gap-4">
