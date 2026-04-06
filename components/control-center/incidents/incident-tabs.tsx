@@ -1,6 +1,12 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { fetchIncidents } from '@/lib/supabase/reports';
 import * as React from 'react';
 import KanbanContent from './kanban-view/content';
@@ -12,6 +18,7 @@ export function IncidentTabs() {
   const [selectedIncidentID, setSelectedIncidentID] = React.useState<
     string | null
   >(null);
+  const isMobile = useIsMobile();
 
   React.useEffect(() => {
     const loadInitialIncident = async () => {
@@ -33,10 +40,31 @@ export function IncidentTabs() {
         <TabsTrigger value="reports">Reports</TabsTrigger>
         <TabsTrigger value="kanban">Kanban</TabsTrigger>
       </TabsList>
-      <TabsContent value="reports" className="flex flex-row w-full gap-4">
-        <IncidentCard onIncidentSelect={handleOnIncidentClick} />
-        <ChatBox incidentId={selectedIncidentID} />
-        <ReportContainer incident={selectedIncidentID} />
+      <TabsContent value="reports" className="w-full">
+        {isMobile ? (
+          <div className="flex w-full flex-col gap-4">
+            <IncidentCard onIncidentSelect={handleOnIncidentClick} />
+            <ChatBox incidentId={selectedIncidentID} />
+            <ReportContainer incident={selectedIncidentID} />
+          </div>
+        ) : (
+          <ResizablePanelGroup
+            orientation="horizontal"
+            className="min-h-[calc(100vh-180px)] w-full rounded-xl border"
+          >
+            <ResizablePanel defaultSize="24%" minSize="20%">
+              <IncidentCard onIncidentSelect={handleOnIncidentClick} />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize="33%" minSize="25%">
+              <ChatBox incidentId={selectedIncidentID} />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize="43%" minSize="30%">
+              <ReportContainer incident={selectedIncidentID} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        )}
       </TabsContent>
       <TabsContent value="kanban" className="flex flex-row w-full gap-4">
         <KanbanContent title="New" />

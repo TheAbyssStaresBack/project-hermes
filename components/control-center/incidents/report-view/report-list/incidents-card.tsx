@@ -30,7 +30,7 @@ export default function IncidentsCard({ onIncidentSelect }: IncidentCardProps) {
 
   // TODO: refactor measurements to accept relative values
   return (
-    <Card className="flex w-full max-h-[calc(100vh-150px)] max-w-xs">
+    <Card className="flex h-full w-full max-h-[calc(100vh-150px)]">
       <CardHeader className="border-b">
         <CardTitle>Reports</CardTitle>
         <FieldGroup className="flex flex-col flex-1">
