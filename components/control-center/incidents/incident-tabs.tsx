@@ -10,6 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { fetchIncidents } from '@/lib/supabase/reports';
 import * as React from 'react';
 import KanbanContent from './kanban-view/content';
+import { ReportTableCard } from './report-table-view/report-table-card';
 import { ChatBox } from './report-view/chatbox';
 import { ReportContainer } from './report-view/report-container';
 import IncidentCard from './report-view/report-list/incidents-card';
@@ -78,12 +79,18 @@ export function IncidentTabs() {
           </ResizablePanelGroup>
         )}
       </TabsContent>
-      <TabsContent value="kanban" className="flex flex-row w-full gap-4">
+      <TabsContent value="kanban" className="flex flex-row w-full gap-4 h-full">
         <KanbanContent title="New" />
         <KanbanContent title="Validated" />
         <KanbanContent title="In_Progress" />
         <KanbanContent title="Resolved" />
         <KanbanContent title="Dismissed" />
+      </TabsContent>
+      <TabsContent
+        value="reportTable"
+        className="flex flex-row w-full gap-4 h-full"
+      >
+        <ReportTableCard />
       </TabsContent>
     </Tabs>
   );

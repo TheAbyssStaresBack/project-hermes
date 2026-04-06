@@ -16,6 +16,61 @@ export interface Incident {
   incident_time: string;
   created_at: string;
   updated_at: string;
+  reporter_name?: string;
+  incident_name?: string;
+}
+
+export async function fetchAllIncidents(): Promise<Incident[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from('incidents')
+      .select(
+        `id,
+        reported_by,
+        incident_type_id,
+        location,
+        location_description,
+        severity,
+        description,
+        status,
+        incident_time,
+        created_at,
+        updated_at,
+        residents!reported_by(name),
+        incident_types!incident_type_id(name)`
+      )
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching incidents:', error);
+      return null;
+    }
+
+    // Transform the data to flatten the relationships
+    const transformedData = data.map((incident) => ({
+      id: incident.id,
+      incident_type_id: incident.incident_type_id,
+      reported_by: incident.reported_by,
+      location: incident.location,
+      location_description: incident.location_description,
+      severity: incident.severity,
+      description: incident.description,
+      status: incident.status,
+      incident_time: incident.incident_time,
+      created_at: incident.created_at,
+      updated_at: incident.updated_at,
+      reporter_name: (incident.residents as unknown as { name: string })?.name,
+      incident_name: (incident.incident_types as unknown as { name: string })
+        ?.name,
+    }));
+
+    console.log(transformedData);
+
+    return transformedData as Incident[];
+  } catch (error) {
+    console.error('Database fetch error:', error);
+    return null;
+  }
 }
 
 interface IncidentWithDetailsRow {
