@@ -139,24 +139,55 @@ export function ChatBox({
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!input.trim() || loading) return;
+    const messageText = input.trim();
 
-    // Add user message
-    const userMessage: Message = {
-      id: `msg-${Date.now()}`,
-      content: input,
-      role: 'user',
-      timestamp: new Date(),
-    };
+    if (!messageText || loading || isHistoryLoading || !incidentId) return;
 
-    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
     try {
+      const response = await fetch(
+        `/api/incidents/${incidentId}/thread-messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: messageText }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to send message to thread');
+      }
+
+      const payload = (await response.json()) as {
+        message?: {
+          id: string;
+          content: string;
+          role: 'user' | 'assistant';
+          timestamp: string;
+        };
+      };
+
+      const sentMessage = payload.message;
+
+      if (sentMessage) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: sentMessage.id,
+            content: sentMessage.content,
+            role: sentMessage.role,
+            timestamp: new Date(sentMessage.timestamp),
+          },
+        ]);
+      }
+
       // Call the callback if provided
       if (onSendMessage) {
-        await onSendMessage(input);
+        await onSendMessage(messageText);
       }
     } catch (error) {
       console.error('Error sending message:', error);

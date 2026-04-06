@@ -14,7 +14,70 @@ type ThreadMessageResponse = {
   timestamp: string;
 };
 
+type ThreadResolution = {
+  thread: ThreadImpl;
+  threadId: string;
+};
+
 const MESSAGE_HISTORY_LIMIT = 100;
+
+async function resolveIncidentThread(
+  incidentId: string
+): Promise<ThreadResolution | null> {
+  const supabase = createAdminClient();
+
+  const { data: incident, error: incidentError } = await supabase
+    .from('incidents')
+    .select('reported_by')
+    .eq('id', incidentId)
+    .maybeSingle();
+
+  if (incidentError) {
+    throw new Error('Failed to resolve incident.');
+  }
+
+  if (!incident?.reported_by) {
+    return null;
+  }
+
+  const { data: resident, error: residentError } = await supabase
+    .from('residents')
+    .select('thread_id, platform')
+    .eq('id', incident.reported_by)
+    .maybeSingle();
+
+  if (residentError) {
+    throw new Error('Failed to resolve incident thread.');
+  }
+
+  if (!resident?.thread_id) {
+    return null;
+  }
+
+  const adapterName = resident.thread_id.split(':', 1)[0] as AdapterName;
+  const adapter =
+    adapters[adapterName] ??
+    adapters[
+      resident.platform as Database['public']['Enums']['resident_platform']
+    ];
+
+  if (!adapter) {
+    return null;
+  }
+
+  const thread = new ThreadImpl({
+    id: resident.thread_id,
+    channelId: deriveChannelId(adapter, resident.thread_id),
+    adapter,
+    stateAdapter: botState,
+    isDM: true,
+  });
+
+  return {
+    thread,
+    threadId: resident.thread_id,
+  };
+}
 
 export async function GET(
   _request: Request,
@@ -31,65 +94,30 @@ export async function GET(
     );
   }
 
-  const supabase = createAdminClient();
+  let resolution: ThreadResolution | null = null;
 
-  const { data: incident, error: incidentError } = await supabase
-    .from('incidents')
-    .select('reported_by')
-    .eq('id', incidentId)
-    .maybeSingle();
+  try {
+    resolution = await resolveIncidentThread(incidentId);
+  } catch (error) {
+    console.error('Failed to resolve incident thread for history:', {
+      incidentId,
+      error,
+    });
 
-  if (incidentError) {
-    return Response.json(
-      { error: 'Failed to resolve incident.' },
-      { status: 500 }
-    );
-  }
-
-  if (!incident?.reported_by) {
-    return Response.json({ messages: [] });
-  }
-
-  const { data: resident, error: residentError } = await supabase
-    .from('residents')
-    .select('thread_id, platform')
-    .eq('id', incident.reported_by)
-    .maybeSingle();
-
-  if (residentError) {
     return Response.json(
       { error: 'Failed to resolve incident thread.' },
       { status: 500 }
     );
   }
 
-  if (!resident?.thread_id) {
+  if (!resolution) {
     return Response.json({ messages: [] });
   }
-
-  const adapterName = resident.thread_id.split(':', 1)[0] as AdapterName;
-  const adapter =
-    adapters[adapterName] ??
-    adapters[
-      resident.platform as Database['public']['Enums']['resident_platform']
-    ];
-
-  if (!adapter) {
-    return Response.json({ messages: [] });
-  }
-
-  const thread = new ThreadImpl({
-    id: resident.thread_id,
-    channelId: deriveChannelId(adapter, resident.thread_id),
-    adapter,
-    stateAdapter: botState,
-    isDM: true,
-  });
 
   const messages: ThreadMessageResponse[] = [];
 
   try {
-    for await (const message of thread.allMessages) {
+    for await (const message of resolution.thread.allMessages) {
       if (!message.text || !message.text.trim()) {
         continue;
       }
@@ -110,7 +138,7 @@ export async function GET(
   } catch (error) {
     console.error('Failed to fetch thread history for incident:', {
       incidentId,
-      threadId: resident.thread_id,
+      threadId: resolution.threadId,
       error,
     });
 
@@ -118,5 +146,78 @@ export async function GET(
       { error: 'Failed to read thread history.' },
       { status: 500 }
     );
+  }
+}
+
+export async function POST(
+  request: Request,
+  context: RouteContext<'/api/incidents/[incidentId]/thread-messages'>
+) {
+  await requireRole(['responder', 'admin', 'super_admin']);
+
+  const { incidentId } = await context.params;
+
+  if (!incidentId) {
+    return Response.json(
+      { error: 'Incident id is required.' },
+      { status: 400 }
+    );
+  }
+
+  let message = '';
+
+  try {
+    const body = (await request.json()) as { message?: unknown };
+    message = typeof body.message === 'string' ? body.message.trim() : '';
+  } catch {
+    return Response.json({ error: 'Invalid JSON payload.' }, { status: 400 });
+  }
+
+  if (!message) {
+    return Response.json({ error: 'Message is required.' }, { status: 400 });
+  }
+
+  let resolution: ThreadResolution | null = null;
+
+  try {
+    resolution = await resolveIncidentThread(incidentId);
+  } catch (error) {
+    console.error('Failed to resolve incident thread for send:', {
+      incidentId,
+      error,
+    });
+
+    return Response.json(
+      { error: 'Failed to resolve incident thread.' },
+      { status: 500 }
+    );
+  }
+
+  if (!resolution) {
+    return Response.json(
+      { error: 'No thread found for this incident.' },
+      { status: 404 }
+    );
+  }
+
+  try {
+    const sent = await resolution.thread.post(message);
+
+    return Response.json({
+      message: {
+        id: sent.id,
+        content: sent.text,
+        role: sent.author.isMe ? 'assistant' : 'user',
+        timestamp: sent.metadata.dateSent.toISOString(),
+      } as ThreadMessageResponse,
+    });
+  } catch (error) {
+    console.error('Failed to send thread message for incident:', {
+      incidentId,
+      threadId: resolution.threadId,
+      error,
+    });
+
+    return Response.json({ error: 'Failed to send message.' }, { status: 500 });
   }
 }
