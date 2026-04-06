@@ -182,11 +182,8 @@ export async function fetchKanbanCategoryContents(
 }
 
 export async function updateIncidentEntry(incident: Incident) {
-  //TODO: remove after debugging
-  console.log(incident);
-
   try {
-    const error = await supabase
+    const { error } = await supabase
       .from('incidents')
       .update({
         location_description: incident.location_description,
