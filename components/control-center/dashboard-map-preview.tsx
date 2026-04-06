@@ -3,7 +3,6 @@
 import Link from 'next/link';
 
 import { IncidentMapSceneShell } from '@/components/control-center/map/incident-map-scene-shell';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -20,8 +19,6 @@ type DashboardMapPreviewProps = {
 };
 
 export function DashboardMapPreview({ mapMarkers }: DashboardMapPreviewProps) {
-  const markerCount = mapMarkers.markers.length;
-
   return (
     <Card>
       <CardHeader>
@@ -37,12 +34,6 @@ export function DashboardMapPreview({ mapMarkers }: DashboardMapPreviewProps) {
             markers={mapMarkers.markers}
             destination={mapMarkers.destination}
           />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">
-            {markerCount.toLocaleString()} active markers
-          </Badge>
-          <Badge variant="outline">{mapMarkers.destination.label}</Badge>
         </div>
       </CardContent>
       <CardFooter className="flex items-center justify-between gap-2">

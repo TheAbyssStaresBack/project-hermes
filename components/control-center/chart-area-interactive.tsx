@@ -32,12 +32,27 @@ import type { DashboardPayload } from '@/lib/control-center-dashboard';
 export const description = 'Incident reporting and advisory trends';
 
 const chartConfig = {
-  incidentsReported: { label: 'Incidents reported', color: 'var(--chart-1)' },
+  incidentsReported: {
+    label: 'Incidents reported',
+    theme: {
+      light: 'hsl(12 76% 61%)',
+      dark: 'hsl(0 0% 96%)',
+    },
+  },
   advisoriesPublished: {
     label: 'Advisories published',
-    color: 'var(--chart-2)',
+    theme: {
+      light: 'hsl(173 58% 39%)',
+      dark: 'hsl(0 0% 88%)',
+    },
   },
-  resolvedIncidents: { label: 'Resolved incidents', color: 'var(--chart-3)' },
+  resolvedIncidents: {
+    label: 'Resolved incidents',
+    theme: {
+      light: 'hsl(197 37% 24%)',
+      dark: 'hsl(0 0% 78%)',
+    },
+  },
 } satisfies ChartConfig;
 
 type ChartAreaInteractiveProps = {
@@ -71,26 +86,32 @@ export function ChartAreaInteractive({
 
   return (
     <Card className="@container/card">
-      <CardHeader>
-        <CardTitle>Incident Trends</CardTitle>
-        <CardDescription>
-          Last{' '}
-          {timeRange === '90d'
-            ? '3 months'
-            : timeRange === '30d'
-              ? '30 days'
-              : '7 days'}{' '}
-          of incident and advisory activity
-        </CardDescription>
-        <CardAction>
-          <div className="flex flex-col items-end gap-2">
+      <CardHeader className="gap-4">
+        <div className="space-y-1">
+          <CardTitle>Incident Trends</CardTitle>
+          <CardDescription className="max-w-prose">
+            Last{' '}
+            {timeRange === '90d'
+              ? '3 months'
+              : timeRange === '30d'
+                ? '30 days'
+                : '7 days'}{' '}
+            of incident and advisory activity
+          </CardDescription>
+        </div>
+        <CardAction className="w-full sm:w-auto">
+          <div className="flex w-full flex-col gap-3 sm:items-end">
             <Tabs
               value={metric}
               onValueChange={(value) =>
                 setMetric(value as 'both' | 'incidents' | 'advisories')
               }
+              className="w-full sm:w-auto"
             >
-              <TabsList variant="line" className="w-fit">
+              <TabsList
+                variant="line"
+                className="flex w-full justify-start overflow-x-auto whitespace-nowrap sm:w-fit"
+              >
                 <TabsTrigger value="both">Overview</TabsTrigger>
                 <TabsTrigger value="incidents">Incidents</TabsTrigger>
                 <TabsTrigger value="advisories">Advisories</TabsTrigger>
@@ -112,7 +133,7 @@ export function ChartAreaInteractive({
             </ToggleGroup>
             <Select value={timeRange} onValueChange={setTimeRange}>
               <SelectTrigger
-                className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
+                className="flex w-full **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden sm:w-40"
                 size="sm"
                 aria-label="Select a value"
               >
@@ -133,12 +154,15 @@ export function ChartAreaInteractive({
           </div>
         </CardAction>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+      <CardContent className="px-2 pt-2 sm:px-6 sm:pt-6">
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-62.5 w-full"
+          className="aspect-auto h-56 w-full sm:h-62.5"
         >
-          <AreaChart data={filteredData}>
+          <AreaChart
+            data={filteredData}
+            margin={{ top: 8, right: 4, left: 0, bottom: isMobile ? 8 : 0 }}
+          >
             <defs>
               <linearGradient
                 id="fillIncidentsReported"
@@ -201,7 +225,8 @@ export function ChartAreaInteractive({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              minTickGap={32}
+              minTickGap={isMobile ? 20 : 32}
+              tick={{ fontSize: isMobile ? 11 : 12 }}
               tickFormatter={(value) =>
                 new Date(value).toLocaleDateString('en-US', {
                   month: 'short',

@@ -14,15 +14,23 @@ export function AdvisoryCard({ advisory }: { advisory: AdvisoryListItem }) {
   return (
     <Card>
       <CardHeader>
-        <CardDescription className="flex gap-1.5 items-center flex-wrap">
+        <CardDescription className="flex flex-wrap items-center gap-1.5">
           <span>{authorName}</span>
           <span>posted {formatSmartDateTime(advisory.created_at)}</span>
         </CardDescription>
-        <CardTitle className="text-lg leading-tight">
-          {advisory.title}
-        </CardTitle>
+        <div className="space-y-1">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Title
+          </p>
+          <CardTitle className="text-lg leading-tight">
+            {advisory.title}
+          </CardTitle>
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-2">
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          Message
+        </p>
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
           {advisory.message}
         </p>

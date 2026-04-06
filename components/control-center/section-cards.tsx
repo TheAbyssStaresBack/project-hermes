@@ -22,24 +22,24 @@ type SectionCardsProps = {
 export function SectionCards({ kpis }: SectionCardsProps) {
   const cardsData = [
     {
-      description: 'Average response time',
-      title: formatMinutes(kpis.avgResponseMinutes),
+      description: 'Average delay',
+      title: formatMinutes(kpis.avgIntakeMinutes),
       badge: {
         icon:
-          kpis.avgResponseMinutes !== null && kpis.avgResponseMinutes <= 15
+          kpis.avgIntakeMinutes !== null && kpis.avgIntakeMinutes <= 15
             ? IconTrendingDown
             : IconTrendingUp,
         text:
-          kpis.avgResponseMinutes !== null && kpis.avgResponseMinutes <= 15
+          kpis.avgIntakeMinutes !== null && kpis.avgIntakeMinutes <= 15
             ? 'On target'
             : 'Review',
       },
       footerMain: `${kpis.newIncidents24h} new incidents in the last 24h`,
       footerIcon: IconTrendingUp,
-      footerSub: 'Target response time is below 15 minutes.',
+      footerSub: 'Target delay is below 15 minutes.',
     },
     {
-      description: 'Open high-severity incidents',
+      description: 'High-severity incidents',
       title: kpis.openHighSeverityCount.toLocaleString(),
       badge: {
         icon:
@@ -68,9 +68,9 @@ export function SectionCards({ kpis }: SectionCardsProps) {
         icon: kpis.newIncidents24h > 0 ? IconTrendingUp : IconTrendingDown,
         text: kpis.newIncidents24h > 0 ? 'Intake active' : 'Quiet window',
       },
-      footerMain: `${kpis.activeIncidents.toLocaleString()} incidents currently in queue`,
+      footerMain: `${kpis.activeIncidents.toLocaleString()} incidents currently active`,
       footerIcon: IconTrendingUp,
-      footerSub: 'Includes new, validated, and in-progress statuses.',
+      footerSub: 'New, validated, and in-progress statuses.',
     },
   ];
 
@@ -79,7 +79,9 @@ export function SectionCards({ kpis }: SectionCardsProps) {
       {cardsData.map((card, idx) => (
         <Card key={idx} className="@container/card">
           <CardHeader>
-            <CardDescription>{card.description}</CardDescription>
+            <CardDescription className="min-h-[3.25rem]">
+              {card.description}
+            </CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               {card.title}
             </CardTitle>

@@ -43,7 +43,7 @@ export type DashboardPayload = {
   kpis: {
     activeIncidents: number;
     newIncidents24h: number;
-    avgResponseMinutes: number | null;
+    avgIntakeMinutes: number | null;
     openHighSeverityCount: number;
     activeResponders: number;
     pendingInvites: number | null;
@@ -74,6 +74,7 @@ export type DashboardPayload = {
     recentAdvisories: Array<{
       id: string;
       title: string;
+      message: string;
       createdAt: string;
       channel: 'multi_channel';
     }>;
@@ -83,6 +84,7 @@ export type DashboardPayload = {
   };
   workflowSummary: {
     counts: Record<Enums<'incident_status'>, number>;
+    openIncidentCount: number;
     oldestOpenIncidentMinutes: number | null;
     overSlaCount: number;
   };
@@ -92,13 +94,6 @@ export type DashboardPayload = {
     sheltersInUse: number;
     availableVehicles: number | null;
   };
-  criticalFeed: Array<{
-    id: string;
-    title: string;
-    detail: string;
-    level: 'info' | 'warning' | 'critical';
-    createdAt: string;
-  }>;
 };
 
 function toDate(value: string | null | undefined) {
@@ -215,20 +210,23 @@ export async function getControlCenterDashboardPayload(
       incident.severity === 'high' || incident.severity === 'critical'
   ).length;
 
-  const responseDurations = incidentsTyped
+  // We don't have a dedicated "first response" timestamp yet, so use
+  // intake delay as the stable KPI: when the incident was recorded
+  // versus when the incident happened.
+  const intakeDurations = incidentsTyped
     .filter((incident) => incident.status !== 'new')
     .flatMap((incident) => {
       const reportedAt = toDate(incident.incident_time);
-      const updatedAt = toDate(incident.updated_at);
-      if (!reportedAt || !updatedAt) return [];
-      const minutes = relativeTimeMinutes(reportedAt, updatedAt);
+      const createdAt = toDate(incident.created_at);
+      if (!reportedAt || !createdAt) return [];
+      const minutes = relativeTimeMinutes(reportedAt, createdAt);
       return minutes >= 0 ? [minutes] : [];
     });
-  const avgResponseMinutes =
-    responseDurations.length > 0
+  const avgIntakeMinutes =
+    intakeDurations.length > 0
       ? Math.round(
-          responseDurations.reduce((sum, value) => sum + value, 0) /
-            responseDurations.length
+          intakeDurations.reduce((sum, value) => sum + value, 0) /
+            intakeDurations.length
         )
       : null;
 
@@ -371,43 +369,6 @@ export async function getControlCenterDashboardPayload(
     (minutes) => minutes >= SLA_MINUTES
   ).length;
 
-  const criticalFeed: DashboardPayload['criticalFeed'] = [];
-
-  for (const incident of activeIncidents) {
-    if (incident.severity !== 'high' && incident.severity !== 'critical')
-      continue;
-    criticalFeed.push({
-      id: `incident-${incident.id}`,
-      title: `${incident.severity.toUpperCase()} severity incident`,
-      detail:
-        incident.location_description ??
-        incident.description ??
-        'Open incident requires triage.',
-      level: incident.severity === 'critical' ? 'critical' : 'warning',
-      createdAt: incident.created_at,
-    });
-  }
-
-  if (deliverySuccessRate !== null && deliverySuccessRate < 0.98) {
-    criticalFeed.push({
-      id: 'advisory-delivery-rate',
-      title: 'Advisory delivery below target',
-      detail: `Delivery success is ${(deliverySuccessRate * 100).toFixed(1)}%.`,
-      level: deliverySuccessRate < 0.9 ? 'critical' : 'warning',
-      createdAt: now.toISOString(),
-    });
-  }
-
-  if (mapMarkers.length === 0 && activeIncidents.length > 0) {
-    criticalFeed.push({
-      id: 'map-ingestion-warning',
-      title: 'Map marker ingestion warning',
-      detail: 'Open incidents exist but none have valid coordinates.',
-      level: 'warning',
-      createdAt: now.toISOString(),
-    });
-  }
-
   const availableRespondersByShift = [
     { shift: 'Morning', count: Math.max(activeResponders - 1, 0) },
     { shift: 'Afternoon', count: Math.max(activeResponders - 2, 0) },
@@ -418,7 +379,7 @@ export async function getControlCenterDashboardPayload(
     kpis: {
       activeIncidents: activeIncidents.length,
       newIncidents24h,
-      avgResponseMinutes,
+      avgIntakeMinutes,
       openHighSeverityCount,
       activeResponders,
       pendingInvites,
@@ -432,6 +393,7 @@ export async function getControlCenterDashboardPayload(
       recentAdvisories: recentAdvisories.map((advisory) => ({
         id: advisory.id,
         title: advisory.title,
+        message: advisory.message,
         createdAt: advisory.created_at,
         channel: 'multi_channel',
       })),
@@ -441,6 +403,7 @@ export async function getControlCenterDashboardPayload(
     },
     workflowSummary: {
       counts,
+      openIncidentCount: activeIncidents.length,
       oldestOpenIncidentMinutes,
       overSlaCount,
     },
@@ -452,8 +415,5 @@ export async function getControlCenterDashboardPayload(
         ? Math.max(activeResponders - counts.in_progress, 0)
         : null,
     },
-    criticalFeed: criticalFeed
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-      .slice(0, 12),
   };
 }

@@ -21,9 +21,15 @@ export default async function Page() {
         <AdvisoryTargetingPanel templates={templates} residents={residents} />
 
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Recent advisories
-          </h2>
+          <div className="space-y-1">
+            <h2 className="text-sm font-medium text-muted-foreground">
+              Recent advisories
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Published advisories appear here with both the title and full
+              message.
+            </p>
+          </div>
 
           {advisories.length > 0 ? (
             advisories.map((advisory) => (
@@ -31,7 +37,8 @@ export default async function Page() {
             ))
           ) : (
             <p className="text-sm text-muted-foreground">
-              No advisories have been posted yet.
+              No advisories have been posted yet. Published advisories will
+              appear here once you send one.
             </p>
           )}
         </section>

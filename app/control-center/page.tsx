@@ -16,8 +16,8 @@ export default async function Page() {
       <DashboardMapPreview mapMarkers={dashboard.mapMarkers} />
       <DashboardAdvisoryQueuePanels
         advisorySummary={dashboard.advisorySummary}
+        kpis={dashboard.kpis}
         workflowSummary={dashboard.workflowSummary}
-        criticalFeed={dashboard.criticalFeed}
       />
     </div>
   );
