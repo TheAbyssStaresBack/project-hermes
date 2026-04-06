@@ -42,15 +42,34 @@ export function registerMessageHandlers(bot: BotInstance) {
   function buildAvailableCommandHint(
     locale: ResidentLocale = DEFAULT_LOCALE
   ): string {
-    const commands = flowRegistry.getStartCommands();
+    const guidedReportCommand =
+      flowRegistry.get('incident-reporting')?.start?.commands?.[0] ?? 'report';
+    const quickReportCommand =
+      flowRegistry.get('incident-reporting-freeform')?.start?.commands?.[2] ??
+      flowRegistry.get('incident-reporting-freeform')?.start?.commands?.[0] ??
+      'quick report';
+    const profileCommand =
+      flowRegistry.get('resident-thread-settings')?.start?.commands?.[0] ??
+      'settings';
 
-    if (commands.length === 0) {
+    if (!guidedReportCommand && !quickReportCommand && !profileCommand) {
       return translate('handler.flow_complete.hint', locale);
     }
 
-    return translate('handler.start.hint', locale, {
-      commands: commands.join('", "'),
-    });
+    return [
+      translate('handler.start.hint_intro', locale),
+      translate('handler.start.hint_guided_report', locale, {
+        command: guidedReportCommand,
+      }),
+      translate('handler.start.hint_quick_report', locale, {
+        command: quickReportCommand,
+      }),
+      translate('handler.start.hint_profile', locale, {
+        command: profileCommand,
+      }),
+      '',
+      translate('handler.start.hint_tip', locale),
+    ].join('\n');
   }
 
   async function resolveThreadLocale(

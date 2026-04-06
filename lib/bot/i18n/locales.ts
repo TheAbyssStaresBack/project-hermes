@@ -263,6 +263,31 @@ export const messageCatalog: MessageCatalog = {
     fil: 'Ipadala ang "{{commands}}" para magsimula.',
     hil: 'Ipadala ang "{{commands}}" para magsugod.',
   },
+  'handler.start.hint_intro': {
+    eng: 'What would you like to do?',
+    fil: 'Ano ang gusto mong gawin?',
+    hil: 'Ano ang gusto mo himuon?',
+  },
+  'handler.start.hint_guided_report': {
+    eng: '1) Send "{{command}}" for a step-by-step incident report.',
+    fil: '1) Ipadala ang "{{command}}" para sa step-by-step na pag-ulat ng insidente.',
+    hil: '1) Ipadala ang "{{command}}" para sa tinun-an nga pagreport sang insidente.',
+  },
+  'handler.start.hint_quick_report': {
+    eng: '2) Send "{{command}}" for a one-message quick report.',
+    fil: '2) Ipadala ang "{{command}}" para sa mabilis na isang mensaheng report.',
+    hil: '2) Ipadala ang "{{command}}" para sa madasig nga isa ka mensaheng report .',
+  },
+  'handler.start.hint_profile': {
+    eng: '3) Send "{{command}}" to update your profile settings.',
+    fil: '3) Ipadala ang "{{command}}" para i-update ang profile settings mo.',
+    hil: '3) Ipadala ang "{{command}}" para i-update ang profile settings mo.',
+  },
+  'handler.start.hint_tip': {
+    eng: 'Tip: You can also type naturally, like "I want to report an incident."',
+    fil: 'Tip: Puwede ka ring magsulat nang natural, gaya ng "Gusto kong mag-report ng insidente."',
+    hil: 'Tip: Pwede ka man magsulat sang natural, pareho sang "Gusto ko magreport sang insidente."',
+  },
   'handler.stop': {
     eng: 'Goodbye!',
     fil: 'Paalam!',
