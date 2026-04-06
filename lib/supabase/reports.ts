@@ -18,6 +18,25 @@ export interface Incident {
   updated_at: string;
 }
 
+export async function fetchAllIncidents(): Promise<Incident[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from('incidents')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching incident:', error);
+      return null;
+    }
+
+    return data as Incident[];
+  } catch (error) {
+    console.error('Database fetch error:', error);
+    return null;
+  }
+}
+
 export async function fetchIncidents(
   sortBy: string = 'incident_time',
   sortOrder: string = 'descending',

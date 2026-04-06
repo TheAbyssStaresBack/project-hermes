@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { fetchIncidents } from '@/lib/supabase/reports';
 import * as React from 'react';
 import KanbanContent from './kanban-view/content';
+import { ReportTableCard } from './report-table-view/report-table-card';
 import { ChatBox } from './report-view/chatbox';
 import { ReportContainer } from './report-view/report-container';
 import IncidentCard from './report-view/report-list/incidents-card';
@@ -28,22 +29,38 @@ export function IncidentTabs() {
   };
 
   return (
-    <Tabs defaultValue="reports" className="w-full">
-      <TabsList variant="line" className="w-full flex flex-1 flex-row">
-        <TabsTrigger value="reports">Reports</TabsTrigger>
-        <TabsTrigger value="kanban">Kanban</TabsTrigger>
+    <Tabs defaultValue="reports" className="w-full h-full flex flex-col">
+      <TabsList variant="line" className="w-full flex-row max-h-50">
+        <TabsTrigger value="reports" className="max-h-50">
+          Reports
+        </TabsTrigger>
+        <TabsTrigger value="kanban" className="max-h-50">
+          Kanban
+        </TabsTrigger>
+        <TabsTrigger value="reportTable" className="max-h-50">
+          Report Table
+        </TabsTrigger>
       </TabsList>
-      <TabsContent value="reports" className="flex flex-row w-full gap-4">
+      <TabsContent
+        value="reports"
+        className="flex flex-row w-full gap-4 h-full"
+      >
         <IncidentCard onIncidentSelect={handleOnIncidentClick} />
         <ChatBox incidentId={selectedIncidentID} />
         <ReportContainer incident={selectedIncidentID} />
       </TabsContent>
-      <TabsContent value="kanban" className="flex flex-row w-full gap-4">
+      <TabsContent value="kanban" className="flex flex-row w-full gap-4 h-full">
         <KanbanContent title="New" />
         <KanbanContent title="Validated" />
         <KanbanContent title="In_Progress" />
         <KanbanContent title="Resolved" />
         <KanbanContent title="Dismissed" />
+      </TabsContent>
+      <TabsContent
+        value="reportTable"
+        className="flex flex-row w-full gap-4 h-full"
+      >
+        <ReportTableCard />
       </TabsContent>
     </Tabs>
   );
