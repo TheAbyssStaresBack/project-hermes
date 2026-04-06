@@ -500,7 +500,7 @@ export type Database = {
         | 'in_progress'
         | 'resolved'
         | 'dismissed';
-      resident_language: 'eng' | 'fil';
+      resident_language: 'eng' | 'fil' | 'hil';
       resident_platform: 'telegram' | 'messenger';
     };
     CompositeTypes: {
@@ -644,7 +644,7 @@ export const Constants = {
         'resolved',
         'dismissed',
       ],
-      resident_language: ['eng', 'fil'],
+      resident_language: ['eng', 'fil', 'hil'],
       resident_platform: ['telegram', 'messenger'],
     },
   },
