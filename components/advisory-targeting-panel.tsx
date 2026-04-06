@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AdvisoryComposeForm } from '@/components/advisory-compose-form';
 import {
@@ -12,6 +12,7 @@ import {
   MarkerLabel,
   type MapPolygonDrawProps,
   type MapPolygonFeature,
+  type MapRef,
 } from '@/components/control-center/map/map';
 import { Card } from '@/components/ui/card';
 import type { AdvisoryTemplateItem } from '@/lib/advisories/types';
@@ -81,9 +82,40 @@ export function AdvisoryTargetingPanel({
   templates: AdvisoryTemplateItem[];
   residents: ResidentDirectoryRow[];
 }) {
+  const mapRef = useRef<MapRef | null>(null);
+  const hasCenteredFromGeolocationRef = useRef(false);
   const [polygonCoordinates, setPolygonCoordinates] = useState<
     [number, number][] | null
   >(null);
+
+  useEffect(() => {
+    if (hasCenteredFromGeolocationRef.current) {
+      return;
+    }
+
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        hasCenteredFromGeolocationRef.current = true;
+        mapRef.current?.flyTo({
+          center: [coords.longitude, coords.latitude],
+          zoom: 13,
+          duration: 900,
+        });
+      },
+      () => {
+        // Keep default center when geolocation is unavailable or denied.
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 5 * 60 * 1000,
+      }
+    );
+  }, []);
 
   const polygonJson = useMemo(() => {
     if (!polygonCoordinates) return '';
@@ -174,7 +206,7 @@ export function AdvisoryTargetingPanel({
   return (
     <div className="flex flex-col gap-6">
       <Card className="h-60 overflow-hidden p-0">
-        <Map center={[121.0533, 14.6512]} zoom={11}>
+        <Map ref={mapRef} center={[121.0533, 14.6512]} zoom={11}>
           {residentsWithCoordinates.map((resident) => {
             const isSelected = selectedResidentIds.has(resident.id);
 
