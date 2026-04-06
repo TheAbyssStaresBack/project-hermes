@@ -23,9 +23,7 @@ export function DashboardMapPreview({ mapMarkers }: DashboardMapPreviewProps) {
     <Card>
       <CardHeader>
         <CardTitle>Live Incident Map</CardTitle>
-        <CardDescription>
-          Spatial triage view using the same incident severity marker visuals.
-        </CardDescription>
+        <CardDescription>Incident Map view</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div className="h-80 overflow-hidden rounded-md border">
