@@ -19,7 +19,7 @@ export type MessageKey =
   | 'incident.prompt.type'
   | 'incident.prompt.severity'
   | 'incident.severity.low'
-  | 'incident.severity.medium'
+  | 'incident.severity.moderate'
   | 'incident.severity.high'
   | 'incident.severity.critical'
   | 'incident.prompt.description'

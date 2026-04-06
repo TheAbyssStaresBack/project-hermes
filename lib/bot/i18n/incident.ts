@@ -3,7 +3,7 @@ import type { ResidentLocale } from './types';
 
 const INCIDENT_SEVERITY_KEY_MAP = {
   low: 'incident.severity.low',
-  medium: 'incident.severity.medium',
+  medium: 'incident.severity.moderate',
   high: 'incident.severity.high',
   critical: 'incident.severity.critical',
 } as const;

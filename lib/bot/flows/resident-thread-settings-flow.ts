@@ -19,7 +19,8 @@ type ResidentLanguage = Database['public']['Enums']['resident_language'];
 
 const LANGUAGE_OPTIONS = [
   { label: 'English', value: 'eng' },
-  { label: 'Filipino (Tagalog)', value: 'fil' },
+  { label: 'Filipino', value: 'fil' },
+  { label: 'Hiligaynon', value: 'hil' },
 ];
 
 const EDITABLE_FIELD_OPTIONS = [
@@ -93,7 +94,7 @@ export const residentThreadSettingsFlow: Flow = {
       type: 'selection',
       prompt: 'What is your updated preferred language?',
       options: LANGUAGE_OPTIONS,
-      validations: [required, isOneOf(['eng', 'fil'])],
+      validations: [required, isOneOf(['eng', 'fil', 'hil'])],
       dataKey: 'language',
       nextStep: () => 'done',
     },
@@ -146,7 +147,7 @@ export const residentThreadSettingsFlow: Flow = {
         valueToUpdate = data.language as ResidentLanguage;
         successContent =
           data.language === 'fil'
-            ? 'Your preferred language is now Filipino (Tagalog).'
+            ? 'Your preferred language is now Filipino.'
             : 'Your preferred language is now English.';
       } else {
         if (!data.location || typeof data.location !== 'object') {

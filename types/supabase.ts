@@ -173,6 +173,120 @@ export type Database = {
         };
         Relationships: [];
       };
+      chat_state_cache: {
+        Row: {
+          cache_key: string;
+          expires_at: string | null;
+          key_prefix: string;
+          updated_at: string;
+          value: string;
+        };
+        Insert: {
+          cache_key: string;
+          expires_at?: string | null;
+          key_prefix: string;
+          updated_at?: string;
+          value: string;
+        };
+        Update: {
+          cache_key?: string;
+          expires_at?: string | null;
+          key_prefix?: string;
+          updated_at?: string;
+          value?: string;
+        };
+        Relationships: [];
+      };
+      chat_state_lists: {
+        Row: {
+          expires_at: string | null;
+          key_prefix: string;
+          list_key: string;
+          seq: number;
+          value: string;
+        };
+        Insert: {
+          expires_at?: string | null;
+          key_prefix: string;
+          list_key: string;
+          seq?: number;
+          value: string;
+        };
+        Update: {
+          expires_at?: string | null;
+          key_prefix?: string;
+          list_key?: string;
+          seq?: number;
+          value?: string;
+        };
+        Relationships: [];
+      };
+      chat_state_locks: {
+        Row: {
+          expires_at: string;
+          key_prefix: string;
+          thread_id: string;
+          token: string;
+          updated_at: string;
+        };
+        Insert: {
+          expires_at: string;
+          key_prefix: string;
+          thread_id: string;
+          token: string;
+          updated_at?: string;
+        };
+        Update: {
+          expires_at?: string;
+          key_prefix?: string;
+          thread_id?: string;
+          token?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      chat_state_queues: {
+        Row: {
+          expires_at: string;
+          key_prefix: string;
+          seq: number;
+          thread_id: string;
+          value: string;
+        };
+        Insert: {
+          expires_at: string;
+          key_prefix: string;
+          seq?: number;
+          thread_id: string;
+          value: string;
+        };
+        Update: {
+          expires_at?: string;
+          key_prefix?: string;
+          seq?: number;
+          thread_id?: string;
+          value?: string;
+        };
+        Relationships: [];
+      };
+      chat_state_subscriptions: {
+        Row: {
+          created_at: string;
+          key_prefix: string;
+          thread_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          key_prefix: string;
+          thread_id: string;
+        };
+        Update: {
+          created_at?: string;
+          key_prefix?: string;
+          thread_id?: string;
+        };
+        Relationships: [];
+      };
       incident_types: {
         Row: {
           created_at: string;
@@ -455,7 +569,7 @@ export type Database = {
         | 'in_progress'
         | 'resolved'
         | 'dismissed';
-      resident_language: 'eng' | 'fil';
+      resident_language: 'eng' | 'fil' | 'hil';
       resident_platform: 'telegram' | 'messenger';
     };
     CompositeTypes: {
@@ -599,7 +713,7 @@ export const Constants = {
         'resolved',
         'dismissed',
       ],
-      resident_language: ['eng', 'fil'],
+      resident_language: ['eng', 'fil', 'hil'],
       resident_platform: ['telegram', 'messenger'],
     },
   },

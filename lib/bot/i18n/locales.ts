@@ -62,8 +62,8 @@ export const messageCatalog: MessageCatalog = {
     fil: 'Mababa',
     hil: 'Manubo',
   },
-  'incident.severity.medium': {
-    eng: 'Medium',
+  'incident.severity.moderate': {
+    eng: 'Moderate',
     fil: 'Katamtaman',
     hil: 'Katamtaman',
   },
